@@ -9,14 +9,13 @@ import {MockSenderReceiverContract} from "../src/MockSenderReceiverContract.sol"
 import {CollateralERC777} from "../src/CollateralERC777.sol";
 
 contract CurveTokenPriceCalculatorTest is Test {
-
     MockERC1820Registry public registry;
     CurveTokenPriceCalculator public businessContract;
     CurveToken public curveToken;
     CollateralERC777 public collateralToken;
     MockSenderReceiverContract public mockSenderReceiver;
 
-    function setUp() public{
+    function setUp() public {
         address[] memory defaultOperators;
         //1. set up Registry
         registry = new MockERC1820Registry();
@@ -32,34 +31,50 @@ contract CurveTokenPriceCalculatorTest is Test {
         mockSenderReceiver = new MockSenderReceiverContract(address(registry));
         //7 set up receiver my token
         mockSenderReceiver.setMyToken(address(collateralToken));
+
+        //8 Setup collateral in Business contract
+        businessContract.setCollateralAddress(address(collateralToken));
         // mint
         collateralToken.mint(address(mockSenderReceiver), 10000);
-
     }
 
     //UNIT TEST FOR BUY
-    function testCalculateToBeMintedOne() public{
-        
+    function testCalculateToBeMintedOne() public {
         assertEq(0, curveToken.totalSupply());
-        assertEq(10,businessContract.calculateTokensToBeMinted(55));
-        assertEq(20,businessContract.calculateTokensToBeMinted(210));
+        assertEq(55, businessContract.calculateTokensToCollateral(10));
+        assertEq(210, businessContract.calculateTokensToCollateral(20));
+
         vm.startPrank(address(businessContract));
-        curveToken.mint(address(mockSenderReceiver),10);
-        assertEq(10, businessContract.calculateTokensToBeMinted(155));
-       
+        curveToken.mint(address(mockSenderReceiver), 10);
+        assertEq(10, curveToken.totalSupply());
     }
-    
+
     //INTEGRATION test
-    function testSend() public{
+    function testBuy() public {
         assertEq(10000, collateralToken.balanceOf(address(mockSenderReceiver)));
         assertEq(0, collateralToken.balanceOf(address(businessContract)));
         assertEq(0, curveToken.totalSupply());
-        mockSenderReceiver.send(address(businessContract), 55, "");
-        assertEq(10, curveToken.totalSupply());
-       
+        vm.startPrank(address(mockSenderReceiver));
+        businessContract.buy(20);
+        assertEq(210, collateralToken.balanceOf(address(businessContract)));
+        assertEq(20, curveToken.balanceOf(address(mockSenderReceiver)));
+        assertEq(20, curveToken.totalSupply());
 
+        //assertEq(10, curveToken.totalSupply());
     }
 
-
-
+    function testSell() public {
+        assertEq(10000, collateralToken.balanceOf(address(mockSenderReceiver)));
+        assertEq(0, collateralToken.balanceOf(address(businessContract)));
+        assertEq(0, curveToken.totalSupply());
+        vm.startPrank(address(mockSenderReceiver));
+        businessContract.buy(20);
+        assertEq(210, collateralToken.balanceOf(address(businessContract)));
+        assertEq(20, curveToken.balanceOf(address(mockSenderReceiver)));
+        assertEq(20, curveToken.totalSupply());
+        businessContract.sell(20);
+        assertEq(0, collateralToken.balanceOf(address(businessContract)));
+        assertEq(0, curveToken.balanceOf(address(mockSenderReceiver)));
+        assertEq(0, curveToken.totalSupply());
+    }
 }

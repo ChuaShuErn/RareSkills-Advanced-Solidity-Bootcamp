@@ -11,115 +11,113 @@ The more tokens a user buys, the more expensive the token becomes.
     - [ ] We have intentionally omitted other resources for bonding curves, we encourage you to find them on your own.
  */
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Sender.sol";
 import "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./CurveToken.sol";
 import "./MockERC1820Registry.sol";
+import "./CollateralERC777.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+pragma solidity 0.8.19;
 
- pragma solidity ^0.8.13;
- interface IERC777Minimal {
+interface IERC777Minimal {
     function send(address recipient, uint256 amount, bytes calldata data) external;
-    function balanceOf(address owner) external;
+    function balanceOf(address owner) external view returns (uint256);
 }
- contract CurveTokenPriceCalculator is Ownable, IERC777Recipient {
 
-   uint32 private constant _MAX_RESERVE_RATIO = 1000000;
+contract CurveTokenPriceCalculator is Ownable2Step, IERC777Recipient, IERC777Sender {
+    bytes32 private constant _ERC777_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
+    bytes32 private constant _ERC777_SENDER_INTERFACE_HASH = keccak256("ERC777TokensSender");
+    CurveToken public curveToken;
 
+    event Logger(string message);
+    event AddressLogger(address targetAddress);
+    event ValueLogger(uint256 value);
 
-   uint32 private constant _GRADIENT = 1;
-   bytes32 private constant _ERC777_RECIPIENT_INTERFACE_HASH = keccak256("ERC777TokensRecipient");
-   CurveToken public curveToken;
-   event Logger(string message);
-   
-   //Mapping to store accepted ERC1363 and ERC777 tokens
-   mapping(address => bool) public acceptedCollaterals;
+    event HookLogger(string message, uint256 amount, address indexed from, address indexed to);
 
-   //Balance of collaterals of ERC1363 and ERC777 tokens
-   mapping(address => uint256) public collateralBalances;
+    CollateralERC777 public collateral;
 
-   MockERC1820Registry public registry;
+    MockERC1820Registry public registry;
 
-   constructor ( address _registry) {
-      registry = MockERC1820Registry(_registry);
-      registry.setInterfaceImplementer(address(this), _ERC777_RECIPIENT_INTERFACE_HASH, address(this));
-    
-   }
-   
-   //contract should handle multiple collateral types
-   //Handle Multiple Collateral Types: You'll need to handle incoming collateral based on its type (ETH, ERC777, or ERC1363).
-   function setAcceptedCollateral(address tokenAddress, bool status) external onlyOwner {
-      acceptedCollaterals[tokenAddress] = status;
-      
-   }
-
-   function setCurveTokenAddress(address _curveToken) external {
-        curveToken = CurveToken(_curveToken);
-   }
-
-   //let's assume token supply is 0;
-   //if i want to buy 5 curve tokens,
-   // the cost would be 1+2+3+4+5 = 15
-   // the next 5 tokens would cost 6+7+8+9+10 = 40
-   // ok let's assume that is our desired behavior
-
-   function calculateTokensToBeMinted(uint256 amountOfCollateral) public view returns (uint256 tokensToBeMinted) {
-      uint256 tokenSupply = curveToken.totalSupply();
-      uint256 newTotalSupply = _sqrt(2 * amountOfCollateral + tokenSupply * tokenSupply);
-      tokensToBeMinted = newTotalSupply - tokenSupply;
+    constructor(address _registry) {
+        registry = MockERC1820Registry(_registry);
+        registry.setInterfaceImplementer(address(this), _ERC777_RECIPIENT_INTERFACE_HASH, address(this));
+        registry.setInterfaceImplementer(address(this), _ERC777_SENDER_INTERFACE_HASH, address(this));
     }
 
-   /*
-   * @dev 
-   * @param _buyer msg.sender/caller
-   * @param _collateral amount of ERC777 tokens used to buy
-   * @return amount amount of Curve Tokens user will receive
-    */
-   function _buy(address _buyer, uint256 _collateral) private {
+    function setCurveTokenAddress(address _curveToken) external {
+        curveToken = CurveToken(_curveToken);
+    }
 
-        //send ERC777 to this contract
-        //caller's tokens are burned
-        //IERC777Minimal(_collateralAddress).send(address(this), _collateral, "");
-        uint256 amountOfCurveTokens = calculateTokensToBeMinted(_collateral);
-        curveToken.mint(_buyer,amountOfCurveTokens);
+    function setCollateralAddress(address collateralAddress) external {
+        collateral = CollateralERC777(collateralAddress);
+    }
 
-   }
-   function tokensReceived(
+    //let's assume token supply is 0;
+    //if i want to buy 5 curve tokens,
+    // the cost would be 1+2+3+4+5 = 15
+    // the next 5 tokens would cost 6+7+8+9+10 = 40
+    // ok let's assume that is our desired behavior
+
+    //Midpoint Strategy
+    //Since we are using a simple Linear Curve in that y = x
+    //Calculating the midpoint of current token supply and ending token supply would then return a
+    // average token price multiplied by number of tokens we want to buy
+    function calculateTokensToCollateral(uint256 amountOfTokens) public view returns (uint256 collateralRequired) {
+        uint256 priceStart = curveToken.totalSupply(); //0
+        uint256 priceEnd = priceStart + amountOfTokens; // 0+10=10
+        uint256 averagePrice = (priceStart + priceEnd) / 2; // 0 + 10 / 2 = 5 is 5 really the average price?
+        //sum of an arithmetic progression n(n+1)/2
+        collateralRequired = averagePrice * (amountOfTokens + 1);
+    }
+
+    function calculateSell(uint256 amountOfTokens) public view returns (uint256 collateralReturned) {
+        uint256 priceStart = curveToken.totalSupply(); //20
+        require(amountOfTokens <= priceStart, "sell volume is greater than total supply");
+        uint256 priceEnd = priceStart - amountOfTokens; //0
+        uint256 averagePrice = (priceStart + priceEnd) / 2; //10
+        collateralReturned = averagePrice * (amountOfTokens + 1); //10 * 21
+    }
+
+    function buy(uint256 desiredAmount) public {
+        uint256 collateralRequired = calculateTokensToCollateral(desiredAmount);
+        IERC777Minimal(msg.sender).send(address(this), collateralRequired, "");
+        curveToken.mint(msg.sender, desiredAmount);
+    }
+
+    function send(address recipient, uint256 amount, bytes calldata data) external {
+        collateral.send(recipient, amount, data);
+    }
+
+    function sell(uint256 desiredAmount) public {
+        uint256 collateralToReturn = calculateSell(desiredAmount);
+        IERC777Minimal(address(this)).send(msg.sender, collateralToReturn, "");
+        curveToken.burn(msg.sender, desiredAmount);
+    }
+
+    function tokensToSend(
         address operator,
         address from,
         address to,
         uint256 amount,
         bytes calldata userData,
         bytes calldata operatorData
-    ) external override{
+    ) external override {
+        emit HookLogger("tokensToSend", amount, from, to);
+    }
+
+    function tokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata userData,
+        bytes calldata operatorData
+    ) external override {
         //msg.sender is ERC777 token address
-        emit Logger("ERC777 Received in Business Contract");
-      
-         
-         emit Logger("from");
-         //from is mocksender
-         emit Logger(Strings.toHexString(uint256(uint160(from)), 20));
-         emit Logger("to");
-         //to is businessContract (this)
-         emit Logger(Strings.toHexString(uint256(uint160(to)), 20));
-         _buy(from, amount);
+        emit HookLogger("tokensReceived", amount, from, to);
     }
-
-    function _sqrt(uint256 x) private pure returns (uint256 y) {
-        if (x == 0) return 0;
-        else if (x <= 3) return 1;
-        uint256 z = x / 2 + 1;
-        y = x;
-        while (z < y) {
-            y = z;
-            z = (x / z + z) / 2;
-        }
-    }
-
-   //TODO: sell for erc777
-   
-
- }
+}

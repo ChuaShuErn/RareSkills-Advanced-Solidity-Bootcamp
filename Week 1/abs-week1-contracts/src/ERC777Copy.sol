@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC777/ERC777.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/interfaces/IERC777.sol";
 import "@openzeppelin/contracts/interfaces/IERC777Recipient.sol";
@@ -30,6 +30,10 @@ import "@openzeppelin/contracts/utils/introspection/IERC1820Registry.sol";
  */
 contract ERC777Copy is Context, IERC777, IERC20 {
     using Address for address;
+
+    event Logger(string message);
+    event AddressLogger(address _address);
+    event IntLogger(uint256 value);
 
     IERC1820Registry internal _ERC1820_REGISTRY;
 
@@ -75,7 +79,7 @@ contract ERC777Copy is Context, IERC777, IERC20 {
     }
 
     function setNewRegistryAddress(address _address) public {
-         _ERC1820_REGISTRY = IERC1820Registry(_address);
+        _ERC1820_REGISTRY = IERC1820Registry(_address);
     }
 
     /**
@@ -160,10 +164,9 @@ contract ERC777Copy is Context, IERC777, IERC20 {
      * @dev See {IERC777-isOperatorFor}.
      */
     function isOperatorFor(address operator, address tokenHolder) public view virtual override returns (bool) {
-        return
-            operator == tokenHolder ||
-            (_defaultOperators[operator] && !_revokedDefaultOperators[tokenHolder][operator]) ||
-            _operators[tokenHolder][operator];
+        return operator == tokenHolder
+            || (_defaultOperators[operator] && !_revokedDefaultOperators[tokenHolder][operator])
+            || _operators[tokenHolder][operator];
     }
 
     /**
@@ -224,12 +227,11 @@ contract ERC777Copy is Context, IERC777, IERC20 {
      *
      * Emits {Burned} and {IERC20-Transfer} events.
      */
-    function operatorBurn(
-        address account,
-        uint256 amount,
-        bytes memory data,
-        bytes memory operatorData
-    ) public virtual override {
+    function operatorBurn(address account, uint256 amount, bytes memory data, bytes memory operatorData)
+        public
+        virtual
+        override
+    {
         require(isOperatorFor(_msgSender(), account), "ERC777: caller is not an operator for holder");
         _burn(account, amount, data, operatorData);
     }
@@ -296,7 +298,10 @@ contract ERC777Copy is Context, IERC777, IERC20 {
      * - if `account` is a contract, it must implement the {IERC777Recipient}
      * interface.
      */
-    function _mint(address account, uint256 amount, bytes memory userData, bytes memory operatorData) internal virtual {
+    function _mint(address account, uint256 amount, bytes memory userData, bytes memory operatorData)
+        internal
+        virtual
+    {
         _mint(account, amount, userData, operatorData, true);
     }
 
@@ -409,6 +414,12 @@ contract ERC777Copy is Context, IERC777, IERC20 {
         _beforeTokenTransfer(operator, from, to, amount);
 
         uint256 fromBalance = _balances[from];
+        emit Logger("from");
+        emit AddressLogger(from);
+        emit Logger("from Balance");
+        emit IntLogger(fromBalance);
+        emit Logger("amount");
+        emit IntLogger(amount);
         require(fromBalance >= amount, "ERC777: transfer amount exceeds balance");
         unchecked {
             _balances[from] = fromBalance - amount;
