@@ -13,7 +13,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract UntrustedEscrowUnsafe {
 
     uint256 private constant _LOCK_TIME = 3 days;
-    event LogBuyer(address buyer);
+    
 
     struct Condition {     
         IERC20 arbitaryToken;
@@ -61,8 +61,6 @@ contract UntrustedEscrowUnsafe {
         //require checks
 
         Condition memory thisCondition = conditions[msg.sender];
-        emit LogBuyer(msg.sender);
-        emit LogBuyer(thisCondition.buyer);
         require(thisCondition.buyer != address(0),"No condition exists for this seller");
         require(block.timestamp >= (thisCondition.creationDate + _LOCK_TIME),"Funds are still locked");
 
