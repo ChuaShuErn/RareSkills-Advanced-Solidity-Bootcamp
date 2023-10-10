@@ -10,3 +10,6 @@
 [submodule "Week 2/asb-week2-contracts/lib/openzeppelin-contracts"]
 	path = Week 2/asb-week2-contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "Week 2/smart-contract-ecosystem-1/lib/forge-std"]
+	path = Week 2/smart-contract-ecosystem-1/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
