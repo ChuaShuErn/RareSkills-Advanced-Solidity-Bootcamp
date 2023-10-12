@@ -1,0 +1,100 @@
+{
+  "format": "standard-v1",
+  "tree": [
+    "0xe58a09e578e5c5e4e00696a49b2f562f5111e81d28093836d5a97894ba2e2f52",
+    "0xe21c1cb2e370afe69a99efd225a393cfcbe646c3a0c94ee0672dfaaaf484d73c",
+    "0x959e20f13f3dad3d7c2329c0d1fd70d99b447a68eb3518141a66ff755a7846d2",
+    "0x8a11657edd941248b323634a34d0f17e63b08bd049e5423fb991842191515a41",
+    "0xd5e8d0fbe5c10a53075ac9fafec511347b58a05396a75e0a4122c73b0a517838",
+    "0xaaa88b84c433c6562e50d33e0910f2bc204181660cb6942f3586ea8bc5230255",
+    "0xc483bd7f540edcc7b3ce5bbbed3993990bfa99995b9af85ba26fd87ae82073db",
+    "0xdf6aff48f22c15985440eceeee0abb987586f27549cb2d612e7f512c85b9ef70",
+    "0xf4ccb9fc68fa1228ca838dc109af79116dc28bc8523f05289ce994d3c64438cf",
+    "0xbca22f1091b26af5a60dc6fee8221923c464efeee8aa8c6e22a2a505d7a629fb",
+    "0xadfed85dbbeb5503bf0b9e7babb3b5e02183ebcf83b4b13b615fb493fbad5234",
+    "0x8106cc9ab64fdbfd3d36f92fb95d91a238267ae4f7ab50dd4c0e04689a698576",
+    "0x7cc39372d6a7674fe9af639d679ab01eabff47d74af0f8f26ba8baeeec02d07f",
+    "0x60648906e1a3f55dd188e992dc24db68c6b6d455fe925705f5e110ed7889ad90",
+    "0x4397c1fe255e3a9d3a85daaf9e1d39e0eeb9dc120e931f5af6d0a6f8a3315a4d",
+    "0x3f9553dc324cd1fd24b54243720c42e18e5c20165bc5e523e42b440a8654abd1",
+    "0x3931e0ff8baa2779a62309e5612046c4ec0f7396e3073b15dd0aa29d59caab06",
+    "0x1822ae4b563c0815a9cb78809432584aa220f215c2777ddf51cf5bdd1c0ad36f",
+    "0x156c9979224815f75f1e77eb4037cd01b1e7240d671ac72a8dc4f8fb972b13f7"
+  ],
+  "values": [
+    {
+      "value": [
+        "0x0000000000000000000000000000000000000001",
+        "0"
+      ],
+      "treeIndex": 15
+    },
+    {
+      "value": [
+        "0x1111111111111111111111111111111111111111",
+        "1"
+      ],
+      "treeIndex": 13
+    },
+    {
+      "value": [
+        "0x2222222222222222222222222222222222222222",
+        "2"
+      ],
+      "treeIndex": 14
+    },
+    {
+      "value": [
+        "0x3333333333333333333333333333333333333333",
+        "3"
+      ],
+      "treeIndex": 17
+    },
+    {
+      "value": [
+        "0x4444444444444444444444444444444444444444",
+        "4"
+      ],
+      "treeIndex": 12
+    },
+    {
+      "value": [
+        "0x5555555555555555555555555555555555555555",
+        "5"
+      ],
+      "treeIndex": 9
+    },
+    {
+      "value": [
+        "0x6666666666666666666666666666666666666666",
+        "6"
+      ],
+      "treeIndex": 16
+    },
+    {
+      "value": [
+        "0x7777777777777777777777777777777777777777",
+        "7"
+      ],
+      "treeIndex": 18
+    },
+    {
+      "value": [
+        "0x8888888888888888888888888888888888888888",
+        "8"
+      ],
+      "treeIndex": 11
+    },
+    {
+      "value": [
+        "0x9999999999999999999999999999999999999999",
+        "9"
+      ],
+      "treeIndex": 10
+    }
+  ],
+  "leafEncoding": [
+    "address",
+    "uint256"
+  ]
+}
