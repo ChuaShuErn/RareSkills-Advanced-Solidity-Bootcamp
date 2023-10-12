@@ -12,12 +12,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import {console} from "forge-std/console.sol";
 
-/*
-Include ERC 2918 royalty in your contract to have a reward rate of 2.5% 
-for any NFT in the collection. 
-Use the openzeppelin implementation. 
-*/
-
 contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
     bytes32 private immutable merkleRoot;
     address private artist;
@@ -47,14 +41,11 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
         _;
     }
 
-    // function setReceiver(address newReceiver) external onlyOwner {
-    //     artist = newReceiver;
-    //     _setDefaultRoyalty(artist, royaltyFraction);
-    // }
-    //I need a way to verify that im a member
-    // once that i've verified that I'm a member I can mint with discount
+    function setReceiver(address newReceiver) external onlyOwner {
+        artist = newReceiver;
+        _setDefaultRoyalty(artist, royaltyFraction);
+    }
 
-    //TODO: The function that we want the users to have is to pass PROOF and it must be a msg.sender
     function memberPurchase(bytes32[] memory proof, uint256 index) external payable belowMaxSupply {
         console.log("msg sender", msg.sender);
         require(msg.value >= DISCOUNTED_PRICE, "Insufficient ether sent");
