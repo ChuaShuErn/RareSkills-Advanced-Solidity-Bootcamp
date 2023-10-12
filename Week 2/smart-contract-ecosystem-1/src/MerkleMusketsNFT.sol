@@ -19,12 +19,12 @@ for any NFT in the collection.
 Use the openzeppelin implementation. 
 */
 
-contract NFTwithMTDiscount is ERC721Royalty {
+contract MerkleMusketsNFT is ERC721Royalty {
     bytes32 private immutable merkleRoot;
     uint256 private constant STANDARD_PRICE = 2 ether;
     uint256 private constant DISCOUNTED_PRICE = 1 ether;
     uint256 private constant MAX_SUPPLY = 20;
-    uint256 private constant REWARD_RATE_PERCENTAGE = 2.5;
+    uint256 private constant ROYALTY_PERCENTAGE = 2.5;
     uint256 public totalSupply;
     BitMaps.Bitmap private _claimedDiscountedMint;
 
@@ -40,7 +40,7 @@ contract NFTwithMTDiscount is ERC721Royalty {
     // once that i've verified that I'm a member I can mint with discount
 
      //TODO: The function that we want the users to have is to pass PROOF and it must be a msg.sender
-     function discountedMint(bytes32[] memory proof, uint256 index) external payable  belowMaxSupply{
+     function memberPurchase(bytes32[] memory proof, uint256 index) external payable  belowMaxSupply{
        
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender,index))));
         //check proof
@@ -55,7 +55,7 @@ contract NFTwithMTDiscount is ERC721Royalty {
         totalSupply++;
      }
 
-     function normalMint() external payable  belowMaxSupply{
+     function normiePurchase() external payable  belowMaxSupply{
         require(msg.value >= STANDARD_PRICE, "Insufficient ether sent");
         _mint(msg.sender, totalSupply);
         totalSupply++;
