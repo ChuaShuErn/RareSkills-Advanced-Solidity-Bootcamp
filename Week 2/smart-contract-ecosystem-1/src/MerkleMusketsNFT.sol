@@ -23,12 +23,16 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
     uint256 private constant DISCOUNTED_PRICE = 1 ether;
     uint256 private constant MAX_SUPPLY = 20;
 
+    event Mint(address indexed mintedTo, uint256 tokenId);
+    event FundsWithdrawn(address indexed recipient, uint256 amount);
+
     constructor(bytes32 _merkleRoot, address _receiver) ERC721("MERKLEMUSKETS", "MKMK") Ownable(msg.sender) {
         artist = _receiver;
         _setDefaultRoyalty(artist, royaltyFraction);
         merkleRoot = _merkleRoot;
-        //Proof of Concept / Genesis Token
+        //Proof of Concept / Genesis Token for owner
         _mint(msg.sender, 0);
+        emit Mint(msg.sender, 0);
         totalSupply = 1;
     }
 
@@ -59,6 +63,7 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
         BitMaps.set(_claimedDiscountedMint, index);
 
         _mint(msg.sender, totalSupply);
+        emit Mint(msg.sender, totalSupply);
         (address receiver, uint256 royalty) = royaltyInfo(totalSupply, DISCOUNTED_PRICE);
         payable(receiver).transfer(royalty);
         unchecked {
@@ -69,11 +74,18 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
     function normiePurchase() external payable belowMaxSupply {
         require(msg.value >= STANDARD_PRICE, "Insufficient ether sent");
         _mint(msg.sender, totalSupply);
+        emit Mint(msg.sender, totalSupply);
         //TODO:check reentrancy
         (address receiver, uint256 royalty) = royaltyInfo(totalSupply, STANDARD_PRICE);
         payable(receiver).transfer(royalty);
         unchecked {
             totalSupply++;
         }
+    }
+
+    function withdrawFunds() external onlyOwner {
+        uint256 amount = address(this).balance;
+        payable(msg.sender).transfer(amount);
+        emit FundsWithdrawn(msg.sender, amount);
     }
 }
