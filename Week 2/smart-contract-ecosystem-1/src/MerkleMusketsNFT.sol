@@ -12,12 +12,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 import {BitMaps} from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import {console} from "forge-std/console.sol";
 
-/*
-Include ERC 2918 royalty in your contract to have a reward rate of 2.5% 
-for any NFT in the collection. 
-Use the openzeppelin implementation. 
-*/
-
 contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
     bytes32 private immutable merkleRoot;
     address private artist;
@@ -29,12 +23,16 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
     uint256 private constant DISCOUNTED_PRICE = 1 ether;
     uint256 private constant MAX_SUPPLY = 20;
 
+    event Mint(address indexed mintedTo, uint256 tokenId);
+    event FundsWithdrawn(address indexed recipient, uint256 amount);
+
     constructor(bytes32 _merkleRoot, address _receiver) ERC721("MERKLEMUSKETS", "MKMK") Ownable(msg.sender) {
         artist = _receiver;
         _setDefaultRoyalty(artist, royaltyFraction);
         merkleRoot = _merkleRoot;
-        //Proof of Concept / Genesis Token
+        //Proof of Concept / Genesis Token for owner
         _mint(msg.sender, 0);
+        emit Mint(msg.sender, 0);
         totalSupply = 1;
     }
 
@@ -47,14 +45,11 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
         _;
     }
 
-    // function setReceiver(address newReceiver) external onlyOwner {
-    //     artist = newReceiver;
-    //     _setDefaultRoyalty(artist, royaltyFraction);
-    // }
-    //I need a way to verify that im a member
-    // once that i've verified that I'm a member I can mint with discount
+    function setReceiver(address newReceiver) external onlyOwner {
+        artist = newReceiver;
+        _setDefaultRoyalty(artist, royaltyFraction);
+    }
 
-    //TODO: The function that we want the users to have is to pass PROOF and it must be a msg.sender
     function memberPurchase(bytes32[] memory proof, uint256 index) external payable belowMaxSupply {
         console.log("msg sender", msg.sender);
         require(msg.value >= DISCOUNTED_PRICE, "Insufficient ether sent");
@@ -68,6 +63,7 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
         BitMaps.set(_claimedDiscountedMint, index);
 
         _mint(msg.sender, totalSupply);
+        emit Mint(msg.sender, totalSupply);
         (address receiver, uint256 royalty) = royaltyInfo(totalSupply, DISCOUNTED_PRICE);
         payable(receiver).transfer(royalty);
         unchecked {
@@ -78,11 +74,18 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
     function normiePurchase() external payable belowMaxSupply {
         require(msg.value >= STANDARD_PRICE, "Insufficient ether sent");
         _mint(msg.sender, totalSupply);
+        emit Mint(msg.sender, totalSupply);
         //TODO:check reentrancy
         (address receiver, uint256 royalty) = royaltyInfo(totalSupply, STANDARD_PRICE);
         payable(receiver).transfer(royalty);
         unchecked {
             totalSupply++;
         }
+    }
+
+    function withdrawFunds() external onlyOwner {
+        uint256 amount = address(this).balance;
+        payable(msg.sender).transfer(amount);
+        emit FundsWithdrawn(msg.sender, amount);
     }
 }
