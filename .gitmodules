@@ -19,3 +19,9 @@
 [submodule "Week 2/smart-contract-ecosystem-1/lib/openzeppelin-contracts"]
 	path = Week 2/smart-contract-ecosystem-1/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "Week 2/smart-contract-ecosystem-2/lib/forge-std"]
+	path = Week 2/smart-contract-ecosystem-2/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "Week 2/smart-contract-ecosystem-2/lib/openzeppelin-contracts"]
+	path = Week 2/smart-contract-ecosystem-2/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
