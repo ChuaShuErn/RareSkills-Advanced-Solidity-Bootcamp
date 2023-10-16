@@ -22,6 +22,13 @@ contract EnumerableNFTAnalyticsTest is Test {
         }
     }
 
+    //23619 --1 (original)
+    //23266 --2 (add unchecked)
+    //22883 --3 cache storage variable (cache nftContract)
+    //22878 named return --4 named return variable
+    //22424 unchecked isPrimeFunction
+    //22415  new isPrime
+
     function testOwnerOneBaseCast() external {
         uint256 result = nftCoreAnalytics.getNumberOfPrimeTokenIdsByAddress(ownerOne);
         assertEq(result, 2);
