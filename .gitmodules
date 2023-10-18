@@ -25,3 +25,6 @@
 [submodule "Week 2/smart-contract-ecosystem-2/lib/openzeppelin-contracts"]
 	path = Week 2/smart-contract-ecosystem-2/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "Week 3/uniswap-build-from-scratch/lib/forge-std"]
+	path = Week 3/uniswap-build-from-scratch/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
