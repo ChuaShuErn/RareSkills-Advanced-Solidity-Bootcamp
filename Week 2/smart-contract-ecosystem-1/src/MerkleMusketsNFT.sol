@@ -65,7 +65,13 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
         _mint(msg.sender, totalSupply);
         emit Mint(msg.sender, totalSupply);
         (address receiver, uint256 royalty) = royaltyInfo(totalSupply, DISCOUNTED_PRICE);
-        payable(receiver).transfer(royalty);
+        //TODO:Dont do below//
+        // https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
+
+        //payable(receiver).transfer(royalty);
+        //^^^^^^^^
+        (bool success,) = payable(receiver).call{value: royalty}("");
+        console.log("Ether Sent Successfully? :", success);
         unchecked {
             totalSupply++;
         }
@@ -77,7 +83,8 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
         emit Mint(msg.sender, totalSupply);
         //TODO:check reentrancy
         (address receiver, uint256 royalty) = royaltyInfo(totalSupply, STANDARD_PRICE);
-        payable(receiver).transfer(royalty);
+        (bool success,) = payable(receiver).call{value: royalty}("");
+        console.log("Ether Sent Successfully? :", success);
         unchecked {
             totalSupply++;
         }
@@ -85,7 +92,10 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
 
     function withdrawFunds() external onlyOwner {
         uint256 amount = address(this).balance;
-        payable(msg.sender).transfer(amount);
+        //TODO: https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
+        //payable(msg.sender).transfer(amount);
+        (bool success,) = payable(msg.sender).call{value: amount}("");
+        console.log("Ether Sent Successfully? :", success);
         emit FundsWithdrawn(msg.sender, amount);
     }
 }

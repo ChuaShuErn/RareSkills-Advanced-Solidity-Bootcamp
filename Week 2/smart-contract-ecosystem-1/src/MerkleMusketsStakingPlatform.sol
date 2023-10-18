@@ -25,7 +25,7 @@ contract MerkleMusketsStakingPlatform is IERC721Receiver {
     function stakeNFT(uint256 tokenId) external {
         nftContract.safeTransferFrom(msg.sender, address(this), tokenId);
         emit Staked(msg.sender, tokenId);
-        availableClaimTime[msg.sender] = block.timestamp;
+        availableClaimTime[msg.sender] = block.timestamp + 1 days;
     }
 
     function withdrawNFT(uint256 tokenId) external {
@@ -37,7 +37,7 @@ contract MerkleMusketsStakingPlatform is IERC721Receiver {
 
     function collectMusketReward() external {
         require(availableClaimTime[msg.sender] != 0, "No NFT Staked");
-        require((availableClaimTime[msg.sender]) >= block.timestamp, "24 hours has not passed since last claimed time");
+        require((availableClaimTime[msg.sender]) <= block.timestamp, "24 hours has not passed since last claimed time");
         rewardToken.mint(msg.sender, 10);
         availableClaimTime[msg.sender] += 1 days;
         emit Collect(msg.sender);
@@ -47,6 +47,25 @@ contract MerkleMusketsStakingPlatform is IERC721Receiver {
         external
         returns (bytes4)
     {
+        //problem statement: anyone can call this function
+        // I cannot change access modifer, because it is intended to be called
+        // from another contract.
+        // The only contract that I expect to call this function is the the NFTContract
+
+        // From our previous discussion there are 3 things that we know
+        // msg.sender will always be the NftContract
+        // from -> There are two pathways, safeMint or safeTransfer
+
+        // if safeMint is called, `from` is address(0),
+        // if transfer is called, it returns the previous owner of given token ID
+        // if not transaction will revert
+        // operator could be an operator smart contract or the msg.sender of the one initating this function
+
+        //operator is untrustworthy, so let's leave it alone
+        // If not maliciously called, from is trustworthy
+        // Since we only trust one address, I believe that a simple require to check: would be sufficient
+
+        require(msg.sender == address(nftContract), "Only NFT Contract may call this");
         originalOwner[tokenId] = from;
         emit ReceivedToken(operator, from, tokenId, data);
         return IERC721Receiver.onERC721Received.selector;

@@ -66,7 +66,7 @@ contract MerkleMusketsStakingPlatformTest is Test {
 
     function testCollectReward() public {
         testStake();
-        vm.warp(block.timestamp + 1 days);
+        skip(1 days + 1 seconds);
         vm.startPrank(musketMember);
         assertEq(0, rewardToken.balanceOf(musketMember));
         stakingPlatform.collectMusketReward();
