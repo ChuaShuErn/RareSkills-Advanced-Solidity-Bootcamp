@@ -36,11 +36,28 @@ contract MerkleMusketsStakingPlatform is IERC721Receiver {
     }
 
     function collectMusketReward() external {
-        require(availableClaimTime[msg.sender] != 0, "No NFT Staked");
-        require((availableClaimTime[msg.sender]) <= block.timestamp, "24 hours has not passed since last claimed time");
-        rewardToken.mint(msg.sender, 10);
-        availableClaimTime[msg.sender] += 1 days;
+        //making sotrage variable
+        //any subsequent modifcations to the storage variable won't affect the original
+        uint256 nextClaimTimestamp = availableClaimTime[msg.sender];
+        require(nextClaimTimestamp != 0, "No NFT Staked");
+        require(nextClaimTimestamp <= block.timestamp, "24 hours has not passed since last claimed time");
+        rewardToken.mint(msg.sender, calculateReward(nextClaimTimestamp));
+        //why can't i use nextClaimTimestamp?
+        availableClaimTime[msg.sender] = block.timestamp + 1 days;
         emit Collect(msg.sender);
+    }
+
+    function calculateReward(uint256 nextClaimTimestamp) internal view returns (uint256 reward) {
+        //calculate amount of time that has passed since nextClaimTimeStamp
+        uint256 timePassed = block.timestamp - nextClaimTimestamp;
+        console.log("timepassedbelow");
+        console.log(timePassed);
+        // reward 10 tokens for every 1 day(s)
+        // 10 * timepassed/86400 seconds?
+        //console.log("reward is" + timePassed / 8640 seconds);
+        // + 10
+
+        reward = 10 + (timePassed / 8640 seconds);
     }
 
     function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)

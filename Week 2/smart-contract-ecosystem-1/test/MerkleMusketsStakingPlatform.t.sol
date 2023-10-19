@@ -70,7 +70,6 @@ contract MerkleMusketsStakingPlatformTest is Test {
         vm.startPrank(musketMember);
         assertEq(0, rewardToken.balanceOf(musketMember));
         stakingPlatform.collectMusketReward();
-
         assertEq(10, rewardToken.balanceOf(musketMember));
         vm.expectRevert();
         stakingPlatform.collectMusketReward();

@@ -94,6 +94,7 @@ contract MerkleMusketsNFT is ERC721Royalty, Ownable2Step {
         uint256 amount = address(this).balance;
         //TODO: https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/
         //payable(msg.sender).transfer(amount);
+        //TODO: check reentrancy
         (bool success,) = payable(msg.sender).call{value: amount}("");
         console.log("Ether Sent Successfully? :", success);
         emit FundsWithdrawn(msg.sender, amount);
