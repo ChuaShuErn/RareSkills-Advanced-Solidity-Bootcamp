@@ -31,3 +31,6 @@
 [submodule "Week 3/uniswap-build-from-scratch/lib/openzeppelin-contracts"]
 	path = Week 3/uniswap-build-from-scratch/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "Week 3/uniswap-build-from-scratch/lib/prb-math"]
+	path = Week 3/uniswap-build-from-scratch/lib/prb-math
+	url = https://github.com/PaulRBerg/prb-math
