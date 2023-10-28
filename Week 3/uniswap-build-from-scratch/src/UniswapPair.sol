@@ -70,12 +70,15 @@ contract UniswapPair is UniswapRewardToken {
     }
 
     /**
-     * @dev @param
-     * tokenAInput, desiredAmount of TokenA by User,
-     * is uint256 because tokens are calculated in wei
-     *
-     * tokenBInput, desiredAmount of TokenB by User,
-     * is uint256 because tokens are calculated in wei
+     * @dev
+     *    @param liquidityProvider address of liquidity provider, we don't use msg.sender,
+     *    if we want to use a router contract
+     *    @param tokenAInput, desiredAmount of TokenA by User,
+     *    is uint256 because tokens are calculated in wei
+     *    @param tokenBInput, desiredAmount of TokenB by User,
+     *    is uint256 because tokens are calculated in wei
+     *    @param slippagePercentage Acceptable difference of actual price
+     *       each token due to volatility
      */
     function addLiquidity(
         address liquidityProvider,
