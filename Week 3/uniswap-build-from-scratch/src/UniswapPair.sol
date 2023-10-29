@@ -140,8 +140,8 @@ contract UniswapPair is UniswapRewardToken {
 
         uint256 LPReward;
         if (_totalSupply == 0) {
-            UD60x18 asd = gm(ud(actualADeposited), ud(actualBDeposited)) - ud(MINIMUM_LIQUIDITY);
-            LPReward = asd.unwrap();
+            UD60x18 geometricMean = gm(ud(actualADeposited), ud(actualBDeposited));
+            LPReward = geometricMean.unwrap() - MINIMUM_LIQUIDITY;
             // we are going to mint the minimum liquidity
             _mint(address(0), MINIMUM_LIQUIDITY);
         } else {
@@ -153,12 +153,24 @@ contract UniswapPair is UniswapRewardToken {
             // the pool will accept all tokens
             // but will take LP reward of the person as if he put in 10:10 (as of the original ratio)
             // so that is why we take the min of tokensAprovided * totalSupply /tokenAReserve, tokensBprovided * totalSupply/tokenBReserve
+            UD60x18 rewardForTokenA = ud(actualADeposited).mul(ud(_totalSupply)).div(ud(_currentBalanceOfA));
+            UD60x18 rewardForTokenB = ud(actualBDeposited).mul(ud(_totalSupply)).div(ud(_currentBalanceOfB));
+            //PRb has no min math...?
+            if (rewardForTokenA > rewardForTokenB) {
+                LPReward = rewardForTokenB.unwrap();
+            } else {
+                LPReward = rewardForTokenA.unwrap();
+            }
         }
+        //check that LPReward is not 0
+        //TODO: explain why
+        require(LPReward > 0, "LPReward cannot be zero");
+        _mint(liquidityProvider, LPReward);
+        //internal accounting
+        internalAccounting();
 
         // check the balances now
     }
 
-    function mint(address account, uint256 amount) private {
-        _mint(account, amount);
-    }
+    function internalAccounting() private {}
 }
