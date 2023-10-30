@@ -28,11 +28,29 @@ contract UniswapPair is UniswapRewardToken {
     //Uniswap does its own accounting for balanceOfTokenB
     uint256 public balanceOfTokenB;
 
+    //cumulative price
+    uint256 public priceOfACumulativeLast;
+    uint256 public priceOfBCumulativeLast;
+
+    uint256 public blockTimestampLast;
+
+    //kLast, renamed to make things clearer for me
+    uint256 public lastSnapshotOfProductOfReserves;
+
+    event PriceSnapshotTaken(uint256 price0CumulativeLast, uint256 price1CumulativeLast, uint256 snapshotTime);
+
+    constructor(address _tokenA, address _tokenB) {
+        tokenA = IERC20(_tokenA);
+        tokenB = IERC20(_tokenB);
+    }
+
+    //TODO: Remove this method
     //1. Token Selection
     // Verify that the tokens are valid, legitimate, and have a purpose in the ecosystem
     function initilizeTokens(address _tokenA, address _tokenB) external {
         tokenA = IERC20(_tokenA);
         tokenB = IERC20(_tokenB);
+        blockTimestampLast = block.timestamp;
     }
 
     function calculateRatio(
@@ -167,10 +185,53 @@ contract UniswapPair is UniswapRewardToken {
         require(LPReward > 0, "LPReward cannot be zero");
         _mint(liquidityProvider, LPReward);
         //internal accounting
-        internalAccounting();
+        internalAccounting(_newBalanceOfA, _newBalanceOfB);
 
         // check the balances now
     }
+    //this will simulate _update
 
-    function internalAccounting() private {}
+    /**
+     * @dev This function is to do internal accounting of keep tracking reserve0 and reserve1,
+     * which is balanceOfTokenA and balanceOfTokenB
+     *    @param newBalanceofA uint256, new total amount of Token A in this liquidity pool
+     *    @param newBalanceofB uint256, new total amount of Token B in this liquidity pool
+     *    is uint256 because tokens are calculated in wei
+     */
+    //TODO: TWAP Price?
+    function internalAccounting(uint256 newBalanceofA, uint256 newBalanceofB) private {
+        //In practice, when you want to calculate a TWAP over an interval,
+        // you would need two points in time the beginning and the end of the desired
+        // interval
+
+        //In the Uniswap docs, priceCumulativeLast is always overriden. How can we calculate
+        // the TWAP if we only have the latest point in time?
+        // We have to store "checkpoints" of price cumulative last somewhere offchain
+        // or emit Events
+
+        //for the sake of learning, let's do both
+
+        //lets do events first
+        // we need time checkpoint of price0cumulativeLast, price1cumulativeLast, and timestamp
+        uint256 currentTime = block.timestamp;
+        uint256 timePassedSinceLiquidityEvent = currentTime - blockTimestampLast;
+
+        //checking if you are a transaction where timePassed is gt 0
+        if (timePassedSinceLiquidityEvent > 0 && balanceOfTokenA > 0 && balanceOfTokenB > 0) {
+            priceOfACumulativeLast += balanceOfTokenA * timePassedSinceLiquidityEvent;
+            priceOfBCumulativeLast += balanceOfTokenB * timePassedSinceLiquidityEvent;
+            emit PriceSnapshotTaken(priceOfACumulativeLast, priceOfBCumulativeLast, currentTime);
+        }
+
+        balanceOfTokenA = newBalanceofA;
+        balanceOfTokenB = newBalanceofB;
+    }
+
+    /**
+     * @dev This function is to 1) update the kLast snapshot,
+     * and 2) to mint a portion of the swap fees
+     * to a trusted account
+     *
+     */
+    function _mintFee() private {}
 }
