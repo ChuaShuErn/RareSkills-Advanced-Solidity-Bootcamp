@@ -4,11 +4,11 @@ pragma solidity 0.8.21;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./UniswapRewardToken.sol";
 import {console} from "forge-std/console.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {intoUint256} from "@prb/math/ud60x18/Casting.sol";
 import {gm,sqrt} from "@prb/math/ud60x18/Math.sol";
+import "./UniswapRewardToken.sol";
 
 contract UniswapPair is UniswapRewardToken {
     using SafeERC20 for IERC20;
@@ -51,6 +51,7 @@ contract UniswapPair is UniswapRewardToken {
 
     event PriceSnapshotTaken(uint256 price0CumulativeLast, uint256 price1CumulativeLast, uint256 snapshotTime);
     event AddLiquidity(address liquidityProvider, uint256 amountOfTokenA, uint256 amountOfTokenB);
+    event RemoveLiquidity(address liquidityRemover, uint256 amountOfTokenA, uint256 amountOfTokenB);
 
     constructor(address _tokenA, address _tokenB, address _feeBeneficiary) {
         tokenA = IERC20(_tokenA);
@@ -81,8 +82,8 @@ contract UniswapPair is UniswapRewardToken {
         UD60x18 UDtokenBInput = ud(tokenBInput);
 
         //what is the minimumAmountOfTokenA
-        UD60x18 minimumAmountOfTokenA = slippagePercentage.mul(UDtokenAInput);
-        UD60x18 minimumAmountOfTokenB = slippagePercentage.mul(UDtokenBInput);
+        UD60x18 minimumAmountOfTokenA = (ud(1).sub(slippagePercentage)).mul(UDtokenAInput);
+        UD60x18 minimumAmountOfTokenB = (ud(1).sub(slippagePercentage)).mul(UDtokenBInput);
 
         //what is the minimumAmountOfTokenB
         //current Balance is in wei
@@ -219,6 +220,9 @@ contract UniswapPair is UniswapRewardToken {
     * @dev This function is the remove Liquidity function.
     * It will start at the very beginning of the user journey, so it will include 
     * what would normally be in the router
+    * slippage will not be considered here because amountAmin and amountBmin would
+    * have meant that the possible return amount for tokenA and tokenB has been precalculated before
+    * this function's execution. 
     * @param liquidityRemover, address ,user that wants to withdraw liquidity
     * @param desiredAmountOfLPTokensToBurn uint256, amount of tokens the user needs to burn
     */
@@ -231,26 +235,35 @@ contract UniswapPair is UniswapRewardToken {
         LPToken.safeTransferFrom(liquidityRemover, address(this), desiredAmountOfLPTokensToBurn);
         uint256 amountOfLPTokensToBurn = LPToken.balanceOf(address(this)) - previousLPTokenBalance;
 
-        //check slippage
-
-
-        //require(balanceOf(liquidityRemover)>= amountOfLPTokensToBurn, "Not enough LP tokens");
+        require(amountOfLPTokensToBurn>0,"LP Burn cannot be zero");
         //calculate how much liquidity
-        uint256 currentBalanceOfA = tokenA.balanceOf(address(this));
-        uint256 currentBalanceOfB = tokenB.balanceOf(address(this));
+        uint256 _currentBalanceOfA = balanceOfTokenA;
+        uint256 _currentBalanceOfB = balanceOfTokenB;
         uint256 _totalSupply = totalSupply();
-
-        UD60x18 amountOfTokenAToBeWithdrawn = ud(currentBalanceOfA * amountOfLPTokensToBurn).div(ud(_totalSupply));
-        UD60x18 amountOfTokenBToBeWithdrawn = ud(currentBalanceOfB * amountOfLPTokensToBurn).div(ud(_totalSupply));
-    // need to check slippage
-
-        require(amountOfTokenAToBeWithdrawn > ud(0),"Insuffient LP tokens to burn");
-        require(amountOfTokenBToBeWithdrawn > ud(0),"Insuffient LP tokens to burn");
-
-       
-     
+        bool isFeeOn = _mintFee(_currentBalanceOfA,_currentBalanceOfB, _totalSupply);
 
 
+        UD60x18 amountOfTokenAToBeWithdrawn = ud(_currentBalanceOfA * amountOfLPTokensToBurn).div(ud(_totalSupply));
+        UD60x18 amountOfTokenBToBeWithdrawn = ud(_currentBalanceOfB * amountOfLPTokensToBurn).div(ud(_totalSupply));
+
+        require(amountOfTokenAToBeWithdrawn > ud(0),"Insuffient LP tokens to burn for A");
+        require(amountOfTokenBToBeWithdrawn > ud(0),"Insuffient LP tokens to burn for B");
+
+        //burn
+        _burn(address(this), amountOfLPTokensToBurn);
+        //send tokens over
+        uint256 actualAWithdrawn = amountOfTokenAToBeWithdrawn.unwrap();
+        uint256 actualBWithdrawn = amountOfTokenBToBeWithdrawn.unwrap();
+        tokenA.safeTransferFrom(address(this),liquidityRemover, actualAWithdrawn);
+        tokenB.safeTransferFrom(address(this),liquidityRemover,actualBWithdrawn);
+        uint256 newBalanceofA = tokenA.balanceOf(address(this));
+        uint256 newBalanceofB = tokenB.balanceOf(address(this));
+        //internal accounting
+        internalAccounting(newBalanceofA, newBalanceofB);
+        if(isFeeOn){
+            lastSnapshotOfProductOfReserves = balanceOfTokenA * balanceOfTokenB;
+        }
+        emit RemoveLiquidity(msg.sender, actualAWithdrawn, actualBWithdrawn);
     } 
 
     /**
