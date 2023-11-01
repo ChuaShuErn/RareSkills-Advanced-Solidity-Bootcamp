@@ -14,7 +14,7 @@ contract UniswapPair is UniswapRewardToken {
     using SafeERC20 for IERC20;
     //First let's handle liquidity
 
-    uint256 private constant MINIMUM_LIQUIDITY = 10_000;
+    uint256 private constant MINIMUM_LIQUIDITY = 1_000;
 
     uint256 private constant INITIAL_SHARES = 100_000;
 
@@ -34,6 +34,7 @@ contract UniswapPair is UniswapRewardToken {
 
     address public feeBeneficiary;
     
+
     struct SnapshotStruct{
         uint256 snapshotPriceOfA;
         uint256 snapshotPriceOfB;
@@ -57,6 +58,7 @@ contract UniswapPair is UniswapRewardToken {
         tokenA = IERC20(_tokenA);
         tokenB = IERC20(_tokenB);
         feeBeneficiary = _feeBeneficiary;
+        blockTimestampLast = block.timestamp;
     }
 
     //TODO: Remove this method
@@ -74,29 +76,44 @@ contract UniswapPair is UniswapRewardToken {
         uint256 currentBalanceOfTokenA,
         uint256 currentBalanceOfTokenB,
         UD60x18 slippagePercentage
-    ) internal pure returns (uint256 refinedTokenA, uint256 refinedTokenB) {
+    ) internal view returns (uint256 refinedTokenA, uint256 refinedTokenB) {
         //current reserve BalanceOfTokenA and B will not be zero
         //first check token A input
         //convert uint to ud
+        console.log("hi");
         UD60x18 UDtokenAInput = ud(tokenAInput);
         UD60x18 UDtokenBInput = ud(tokenBInput);
 
         //what is the minimumAmountOfTokenA
-        UD60x18 minimumAmountOfTokenA = (ud(1).sub(slippagePercentage)).mul(UDtokenAInput);
-        UD60x18 minimumAmountOfTokenB = (ud(1).sub(slippagePercentage)).mul(UDtokenBInput);
+        console.log("slippagePercentage:",slippagePercentage.unwrap());
+        UD60x18 minimumAmountOfTokenA = UDtokenAInput - slippagePercentage.mul(UDtokenAInput);
+        UD60x18 minimumAmountOfTokenB = UDtokenBInput - slippagePercentage.mul(UDtokenBInput);
 
         //what is the minimumAmountOfTokenB
         //current Balance is in wei
-
+        console.log("UDTokenAInput:",UDtokenAInput.unwrap());
+        console.log("currentBalanceOfTokenB:",currentBalanceOfTokenB);
+        console.log("currentBalanceOfTokenA:",currentBalanceOfTokenA);
+        console.log("minimumAmountOfTokenA:",minimumAmountOfTokenA.unwrap());
+        console.log("minimumAmountOfTokenB: ",minimumAmountOfTokenB.unwrap());
+        UD60x18 convertedCurrentBalanceOfTokenB = ud(currentBalanceOfTokenB);
+        console.log("check below");
+        console.log("convertedCurrentBalanceOfTokenB:",convertedCurrentBalanceOfTokenB.unwrap());
+        UD60x18 target = convertedCurrentBalanceOfTokenB * UDtokenAInput;
+        console.log("check Into Uint256:",intoUint256(target));
+        console.log((UDtokenAInput.mul(convertedCurrentBalanceOfTokenB)).unwrap());
         UD60x18 optimalAmountOfB = (UDtokenAInput * ud(currentBalanceOfTokenB)) / ud(currentBalanceOfTokenA);
-
+        
+        console.log("optimalAmountOfB:",optimalAmountOfB.unwrap());
+       
         if (optimalAmountOfB <= UDtokenBInput) {
             //optimal amount of B must be at least equal to slippageAmountOfTokenB
             require(optimalAmountOfB >= minimumAmountOfTokenB, "Insufficient Token B Amount");
 
             return (tokenAInput, intoUint256(optimalAmountOfB));
         } else {
-            UD60x18 optimalAmountofA = (UDtokenBInput * ud(currentBalanceOfTokenA)) / ud(currentBalanceOfTokenB);
+            UD60x18 convertedCurrentBalanceA = ud(currentBalanceOfTokenA);
+            UD60x18 optimalAmountofA = (UDtokenBInput * convertedCurrentBalanceA) / ud(currentBalanceOfTokenB);
             require(optimalAmountofA >= minimumAmountOfTokenA, "Insufficient Token A Amount");
             return (intoUint256(optimalAmountofA), tokenBInput);
         }
@@ -152,8 +169,10 @@ contract UniswapPair is UniswapRewardToken {
             //When there is existing liquidity
             //the LP shares need to be calculated
             //
+            console.log("else block");
             (refinedAmountOfTokenA, refinedAmountOfTokenB) =
                 calculateRatio(tokenAInput, tokenBInput, _currentBalanceOfA, _currentBalanceOfB, slippagePercentage);
+                console.log("else block end");
         }
 
         //then minimum liquidity will occur
@@ -171,17 +190,25 @@ contract UniswapPair is UniswapRewardToken {
         uint256 _newBalanceOfA = tokenA.balanceOf(address(this));
         uint256 _newBalanceOfB = tokenB.balanceOf(address(this));
 
-        uint256 actualADeposited = _newBalanceOfA - refinedAmountOfTokenA;
-        uint256 actualBDeposited = _newBalanceOfB - refinedAmountOfTokenB;
+        console.log("_newBalanceOfA:", _newBalanceOfA);
+        console.log("_refinedAmountOfTokenA:", refinedAmountOfTokenA);
+         console.log("_newBalanceOfB:", _newBalanceOfB);
+        console.log("_refinedAmountOfTokenB:", refinedAmountOfTokenB);
+
+        uint256 actualADeposited = _newBalanceOfA - _currentBalanceOfA;
+        uint256 actualBDeposited = _newBalanceOfB - _currentBalanceOfB;
 
         bool isFeeOn = _mintFee(_newBalanceOfA,_newBalanceOfB, _totalSupply);
 
         uint256 LPReward;
         if (_totalSupply == 0) {
             UD60x18 geometricMean = gm(ud(actualADeposited), ud(actualBDeposited));
+            console.log("geometricMean:", geometricMean.unwrap());
             LPReward = geometricMean.unwrap() - MINIMUM_LIQUIDITY;
+           
             // we are going to mint the minimum liquidity
-            _mint(address(0), MINIMUM_LIQUIDITY);
+            _mint(0x000000000000000000000000000000000000dEaD, MINIMUM_LIQUIDITY);
+            
         } else {
             //This is where Uniswap punishes naive Liquidity Providers
             // if the ratio is 50:50,
