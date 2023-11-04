@@ -7,12 +7,13 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {console} from "forge-std/console.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {intoUint256} from "@prb/math/ud60x18/Casting.sol";
+import {convert} from "@prb/math/ud60x18/Conversions.sol";
 import {gm,sqrt} from "@prb/math/ud60x18/Math.sol";
 import "./UniswapRewardToken.sol";
 
 contract UniswapPair is UniswapRewardToken {
     using SafeERC20 for IERC20;
-    
+     
 
     //The difference between "conversion" and "casting" is that 
     //conversion functions multiply or divide the inputs, 
@@ -20,7 +21,7 @@ contract UniswapPair is UniswapRewardToken {
     //Anything that is to be converted into UD60x18 is on a 1e18 scale
     uint256 private constant PRB_MATH_SCALE = 1e18;
 
-    uint256 private constant MINIMUM_LIQUIDITY = 1_000;
+    uint256 private constant MINIMUM_LIQUIDITY = 1e18;
 
     uint256 private constant INITIAL_SHARES = 100_000;
 
@@ -39,6 +40,8 @@ contract UniswapPair is UniswapRewardToken {
     uint256 public priceOfBCumulativeLast;
 
     address public feeBeneficiary;
+
+    uint256 public mintFeePercentage = 3;
     
 
     struct SnapshotStruct{
@@ -65,6 +68,7 @@ contract UniswapPair is UniswapRewardToken {
         tokenB = IERC20(_tokenB);
         feeBeneficiary = _feeBeneficiary;
         blockTimestampLast = block.timestamp;
+        
     }
 
     //TODO: Remove this method
@@ -76,13 +80,19 @@ contract UniswapPair is UniswapRewardToken {
         blockTimestampLast = block.timestamp;
     }
 
+    function setMintFeePercentage(uint256 newMintFeePercentage) external{
+        //TODO: only factory can call this
+        mintFeePercentage = newMintFeePercentage;
+    }
+
+    //TODO: Make Internal. We are testing 
     function calculateRatio(
         uint256 tokenAInput,
         uint256 tokenBInput,
         uint256 currentBalanceOfTokenA,
         uint256 currentBalanceOfTokenB,
         UD60x18 slippagePercentage
-    ) internal view returns (uint256 refinedTokenA, uint256 refinedTokenB) {
+    ) internal pure returns (uint256 refinedTokenA, uint256 refinedTokenB) {
         //current reserve BalanceOfTokenA and B will not be zero
         //first check token A input
         //convert uint to ud
@@ -102,7 +112,7 @@ contract UniswapPair is UniswapRewardToken {
        
         UD60x18 optimalAmountOfB = (UDtokenAInput * ud(currentBalanceOfTokenB)) / ud(currentBalanceOfTokenA);
       
-         console.log("optimalAmountOfB:",optimalAmountOfB.unwrap());
+        
         if (optimalAmountOfB <= UDtokenBInput) {
             //optimal amount of B must be at least equal to slippageAmountOfTokenB
             require(optimalAmountOfB >= minimumAmountOfTokenB, "Insufficient Token B Amount");
@@ -195,6 +205,9 @@ contract UniswapPair is UniswapRewardToken {
         uint256 LPReward;
         if (_totalSupply == 0) {
             UD60x18 geometricMean = gm(ud(actualADeposited), ud(actualBDeposited));
+            console.log("geometricMean:",
+                geometricMean.unwrap()
+            );
            
             LPReward = geometricMean.unwrap() - MINIMUM_LIQUIDITY;
            
@@ -262,19 +275,25 @@ contract UniswapPair is UniswapRewardToken {
         bool isFeeOn = _mintFee(_currentBalanceOfA,_currentBalanceOfB, _totalSupply);
 
 
-        UD60x18 amountOfTokenAToBeWithdrawn = ud(_currentBalanceOfA * amountOfLPTokensToBurn).div(ud(_totalSupply));
-        UD60x18 amountOfTokenBToBeWithdrawn = ud(_currentBalanceOfB * amountOfLPTokensToBurn).div(ud(_totalSupply));
+        UD60x18 amountOfTokenAToBeWithdrawn = ud(_currentBalanceOfA * amountOfLPTokensToBurn).div(ud(_totalSupply*PRB_MATH_SCALE ));
+        UD60x18 amountOfTokenBToBeWithdrawn = ud(_currentBalanceOfB * amountOfLPTokensToBurn).div(ud(_totalSupply*PRB_MATH_SCALE ));
 
+        // console.log("amountOfTokenAToBeWithdrawn:",amountOfTokenAToBeWithdrawn.unwrap());
+        // console.log("amountOfTokenBToBeWithdrawn:",amountOfTokenBToBeWithdrawn.unwrap());
+        //amount of token to be withdrawn is greater than the balance wtf im using the library wrong
+       
         require(amountOfTokenAToBeWithdrawn > ud(0),"Insuffient LP tokens to burn for A");
         require(amountOfTokenBToBeWithdrawn > ud(0),"Insuffient LP tokens to burn for B");
-
+       
         //burn
         _burn(address(this), amountOfLPTokensToBurn);
         //send tokens over
         uint256 actualAWithdrawn = amountOfTokenAToBeWithdrawn.unwrap();
         uint256 actualBWithdrawn = amountOfTokenBToBeWithdrawn.unwrap();
-        tokenA.safeTransferFrom(address(this),liquidityRemover, actualAWithdrawn);
-        tokenB.safeTransferFrom(address(this),liquidityRemover,actualBWithdrawn);
+       
+        tokenA.safeTransfer(liquidityRemover, actualAWithdrawn);
+        tokenB.safeTransfer(liquidityRemover,actualBWithdrawn);
+
         uint256 newBalanceofA = tokenA.balanceOf(address(this));
         uint256 newBalanceofB = tokenB.balanceOf(address(this));
         //internal accounting
@@ -292,7 +311,8 @@ contract UniswapPair is UniswapRewardToken {
      *    @param newBalanceofB uint256, new total amount of Token B in this liquidity pool
      *    is uint256 because tokens are calculated in wei
      */
-    function internalAccounting(uint256 newBalanceofA, uint256 newBalanceofB) private {
+     //TODO: change back to private
+    function internalAccounting(uint256 newBalanceofA, uint256 newBalanceofB) internal {
         //In practice, when you want to calculate a TWAP over an interval,
         // you would need two points in time the beginning and the end of the desired
         // interval
@@ -342,8 +362,10 @@ contract UniswapPair is UniswapRewardToken {
      *
      * This is only done for BIG liquidity events, addLiquidity / removeLiquidity
      * and not for trade for gas savings
+     * 
      */
-    function _mintFee(uint256 _newBalanceOfA,uint256 _newBalanceOfB, uint256 _totalSupply) private returns (bool isFeeOn){
+     //TODO: Change back to private
+    function _mintFee(uint256 _newBalanceOfA,uint256 _newBalanceOfB, uint256 _totalSupply) internal returns (bool isFeeOn){
 
         //TODO: Add factory contract to include treasury address
         address _feeBeneficiary = feeBeneficiary;
@@ -353,14 +375,20 @@ contract UniswapPair is UniswapRewardToken {
             //and that kLast is not zero
             if(lastSnapshotOfProductOfReserves !=0){
 
-                //get the geometric mean of the old pool
+                //get the geometric mean of the old pool    
+                console.log("ud(_newBalanceOfA):", ud(_newBalanceOfA).unwrap());
+                console.log("ud(_newBalanceOfB):",ud(_newBalanceOfB).unwrap());
                UD60x18 oldPoolGm = sqrt(ud(lastSnapshotOfProductOfReserves));
                //get geometric mean of the new pool
+            
                UD60x18 newPoolGm= gm(ud(_newBalanceOfA), ud(_newBalanceOfB));
                uint256 feesMinted;
+               console.log("oldPoolGm:",oldPoolGm.unwrap());
+               console.log("newPoolGm:", newPoolGm.unwrap());
                
                //if the pool DID increase
                if(newPoolGm>oldPoolGm){
+                console.log("pool did increase");
                 //This formula gives you the accumulated fees between
                 //t1 and t2 as a percentage of the liquidity in the pool at t2
                 //This complicated formula is in Uniswap Whitepaper
