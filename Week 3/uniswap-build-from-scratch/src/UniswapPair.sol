@@ -92,37 +92,46 @@ contract UniswapPair is UniswapRewardToken {
         uint256 currentBalanceOfTokenA,
         uint256 currentBalanceOfTokenB,
         UD60x18 slippagePercentage
-    ) internal pure returns (uint256 refinedTokenA, uint256 refinedTokenB) {
+    ) internal view returns (uint256 refinedTokenA, uint256 refinedTokenB) {
         //current reserve BalanceOfTokenA and B will not be zero
         //first check token A input
         //convert uint to ud
-    
-        UD60x18 UDtokenAInput = ud(tokenAInput);
-        UD60x18 UDtokenBInput = ud(tokenBInput);
+        console.log("debug1");
+        UD60x18 UDtokenAInput = convert(tokenAInput);
+        UD60x18 UDtokenBInput = convert(tokenBInput);
+        console.log("UDTokenAInput:", UDtokenAInput.unwrap());
 
         //what is the minimumAmountOfTokenA
 
+       console.log("debug2");
+       //first we compare tokenB
        
-        UD60x18 minimumAmountOfTokenA = UDtokenAInput - slippagePercentage.mul(UDtokenAInput);
         UD60x18 minimumAmountOfTokenB = UDtokenBInput - slippagePercentage.mul(UDtokenBInput);
-
+        //console.log("minimumAmountocTokenA:", convert(minimumAmountOfTokenA));
+    console.log("minimumAmountocTokenB:", convert(minimumAmountOfTokenB));
         //what is the minimumAmountOfTokenB
         //current Balance is in wei
        
-       
-        UD60x18 optimalAmountOfB = (UDtokenAInput * ud(currentBalanceOfTokenB)) / ud(currentBalanceOfTokenA);
+       console.log("debug3");
+        UD60x18 optimalAmountOfB = (UDtokenAInput * convert(currentBalanceOfTokenB)) / convert(currentBalanceOfTokenA);
       
-        
+        console.log("optimalAmountOfB:",optimalAmountOfB.unwrap());
+        console.log("UDtokenBInput:", UDtokenBInput.unwrap());
         if (optimalAmountOfB <= UDtokenBInput) {
             //optimal amount of B must be at least equal to slippageAmountOfTokenB
             require(optimalAmountOfB >= minimumAmountOfTokenB, "Insufficient Token B Amount");
 
-            return (tokenAInput, intoUint256(optimalAmountOfB));
+            return (tokenAInput, convert(optimalAmountOfB));
         } else {
-            UD60x18 convertedCurrentBalanceA = ud(currentBalanceOfTokenA);
-            UD60x18 optimalAmountofA = (UDtokenBInput * convertedCurrentBalanceA) / ud(currentBalanceOfTokenB);
-            require(optimalAmountofA >= minimumAmountOfTokenA, "Insufficient Token A Amount");
-            return (intoUint256(optimalAmountofA), tokenBInput);
+            UD60x18 convertedCurrentBalanceA = convert(currentBalanceOfTokenA);
+            UD60x18 optimalAmountofA = (UDtokenBInput * convertedCurrentBalanceA) / convert(currentBalanceOfTokenB);
+            //UD60x18 minimumAmountOfTokenA = UDtokenAInput - slippagePercentage.mul(UDtokenAInput);
+            // console.log("convertedCurrentBalanceA:",convertedCurrentBalanceA.unwrap());
+            // console.log("optimalAmountofA:", convert(optimalAmountofA));
+            // console.log("minimumAmountOfTokenA:",convert(minimumAmountOfTokenA));
+            //require(optimalAmountofA >= minimumAmountOfTokenA, "Insufficient Token A Amount");
+            
+            return (convert(optimalAmountofA), tokenBInput);
         }
     }
 
@@ -196,10 +205,10 @@ contract UniswapPair is UniswapRewardToken {
 
         uint256 _newBalanceOfA = tokenA.balanceOf(address(this));
         uint256 _newBalanceOfB = tokenB.balanceOf(address(this));
-
+        console.log("flow1");
         uint256 actualADeposited = _newBalanceOfA - _currentBalanceOfA;
         uint256 actualBDeposited = _newBalanceOfB - _currentBalanceOfB;
-
+console.log("flow2");
         bool isFeeOn = _mintFee(_newBalanceOfA,_newBalanceOfB, _totalSupply);
 
         uint256 LPReward;
@@ -366,12 +375,13 @@ contract UniswapPair is UniswapRewardToken {
      */
      //TODO: Change back to private
     function _mintFee(uint256 _newBalanceOfA,uint256 _newBalanceOfB, uint256 _totalSupply) internal returns (bool isFeeOn){
-
+        console.log("mintFeeEntered");
         //TODO: Add factory contract to include treasury address
         address _feeBeneficiary = feeBeneficiary;
         isFeeOn = true;
         //if fee is on
         if(isFeeOn){
+            console.log("lastSnapshotOfProductOfReserves:",lastSnapshotOfProductOfReserves);
             //and that kLast is not zero
             if(lastSnapshotOfProductOfReserves !=0){
 

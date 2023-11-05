@@ -19,7 +19,7 @@ contract UniswapPairTest is Test {
     address public anotherGuy = 0x0000040000004000000004000000000000000001;
     address public feeBeneficiary = 0x0000000000000000000000000000000000000003;
     uint256 private constant PRB_MATH_SCALE = 1e18;
-     uint256 private constant MINIMUM_LIQUIDITY = 1e18;
+    uint256 private constant MINIMUM_LIQUIDITY = 1e18;
     
     function setUp() public{
 

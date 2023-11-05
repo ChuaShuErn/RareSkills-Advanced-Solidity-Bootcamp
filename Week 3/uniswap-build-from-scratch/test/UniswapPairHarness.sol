@@ -19,13 +19,13 @@ contract UniswapPairHarness is UniswapPair{
         uint256 currentBalanceOfTokenA,
         uint256 currentBalanceOfTokenB,
         UD60x18 slippagePercentage
-    ) external pure returns(uint256 refinedTokenA, uint256 refinedTokenB) {
+    ) external view returns(uint256 refinedTokenA, uint256 refinedTokenB) {
         return calculateRatio(tokenAInput, tokenBInput, currentBalanceOfTokenA, currentBalanceOfTokenB, slippagePercentage);
     }
 
     function _mintFee_harness(uint256 _newBalanceOfA,
     uint256 _newBalanceOfB, 
-    uint256 _totalSupply) external
+    uint256 _totalSupply) public
       returns (bool isFeeOn){
         isFeeOn= _mintFee(_newBalanceOfA, _newBalanceOfB,  _totalSupply);
     }
