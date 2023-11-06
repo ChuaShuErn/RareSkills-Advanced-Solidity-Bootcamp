@@ -130,7 +130,10 @@ contract UniswapPair is UniswapRewardToken {
             // console.log("optimalAmountofA:", convert(optimalAmountofA));
             // console.log("minimumAmountOfTokenA:",convert(minimumAmountOfTokenA));
             //require(optimalAmountofA >= minimumAmountOfTokenA, "Insufficient Token A Amount");
-            
+
+            //Slippage fee to calculate minimum amount of A doesn't make sense as we have 
+            // already ensured that there is too much token A
+
             return (convert(optimalAmountofA), tokenBInput);
         }
     }
@@ -314,6 +317,65 @@ console.log("flow2");
     } 
 
     /**
+    
+    @dev function to swap from tokenA to tokenB and vice versa
+    On each swap, there is a 0.3% fee on tokens coming IN, 0% of tokens 
+    going out. It is supposed to handle regular swap and flash swap
+    In the Original Uniswap, only a smart contract can handle call the swap
+    as it did not do the transfer of tokens
+    so we are we going to have a wrapper swap, that does the safetransfer of tokens
+    @param desiredTokenAddress:address, Token they want to swap WITH
+    @param desiredAmountOut: uint256, amount of desired Token
+    @param maxAmountIn: uint256, maximum amount of token they want to swap with
+    @param slippageFee: UD60x18, slippage fee tolerance  
+    @param to: address, target address to receive the swapped tokens 
+     */
+    //How do we know if the swap entails 
+    //"swapTokensforExactTokens",
+    // "swapExactTokensForTokens"
+    // we are going to make another method for that
+    function regularSwapTokensForExactTokens(
+    address desiredTokenAddress,
+    uint256 desiredAmountOut, 
+    uint256 maxAmountIn, 
+    UD60x18 slippageFee,
+    address to
+    ) external {
+        //swap cannot occur if there are no reserves
+        //desiredAmountOut must be greater than 0
+
+         require(desiredTokenAddress == address(tokenA) || 
+         desiredTokenAddress == address(tokenB), "Invalid Token");
+       (IERC20 desiredToken, IERC20 collateralToken) = 
+       desiredTokenAddress == address(tokenA) ? 
+       (tokenA, tokenB) : (tokenB, tokenA);
+        //given an input of desiredAmountOut of desiredToken (Let's say Token A)
+
+
+        // 1. retrieve the required amount (requiredAmount) of Token B to swap for Token A
+
+        //suppose reserve of tokenA is 100, and tokenB is 200
+        // k = 200 * 100 - 20_000
+        // now we want to swap X amount of tokenA for exactly 50 tokenB
+        // What is X? and we need to swap in X + 0.03X(fees) for 50 tokenB
+        // Okay, so we know that the ending reserve for token B is 200-50 = 150
+        // given that K is 20_000, the tokenA needed to be swapped is 20_000 / 150 = 133.333
+        // then 133.333 must add another 0.3% fee -> 
+        // 
+
+
+        // 2. make sure that requiredAmount is lte maxAmountIn after applying trading fees and slippageFee
+        //getAmountsIn
+        //3. we round UP
+
+
+
+
+    }
+
+
+
+    /**
      * @dev This function is to do internal accounting of keep tracking reserve0 and reserve1,
      * which is balanceOfTokenA and balanceOfTokenB
      *    @param newBalanceofA uint256, new total amount of Token A in this liquidity pool
@@ -347,10 +409,10 @@ console.log("flow2");
         //checking if you are a transaction where timePassed is gt 0
         if (timePassedSinceLiquidityEvent > 0 && balanceOfTokenA > 0 && balanceOfTokenB > 0) {
             
-            UD60x18 priceOfACL = ud(balanceOfTokenA)/ud(balanceOfTokenB) * ud(timePassedSinceLiquidityEvent);
-            UD60x18 priceOfBCL = ud(balanceOfTokenB)/ud(balanceOfTokenA) * ud(timePassedSinceLiquidityEvent);
-            priceOfACumulativeLast += priceOfACL.unwrap();
-            priceOfBCumulativeLast += priceOfBCL.unwrap();
+            UD60x18 priceOfACL = convert(balanceOfTokenA)/convert(balanceOfTokenB) * convert(timePassedSinceLiquidityEvent);
+            UD60x18 priceOfBCL = convert(balanceOfTokenB)/convert(balanceOfTokenA) * convert(timePassedSinceLiquidityEvent);
+            priceOfACumulativeLast += convert(priceOfACL);
+            priceOfBCumulativeLast += convert(priceOfBCL);
             //event way
             emit PriceSnapshotTaken(priceOfACumulativeLast, priceOfBCumulativeLast, currentTime);
             //contract variable way
