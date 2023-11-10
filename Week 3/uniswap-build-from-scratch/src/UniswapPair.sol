@@ -60,6 +60,9 @@ contract UniswapPair is UniswapRewardToken {
     event PriceSnapshotTaken(uint256 price0CumulativeLast, uint256 price1CumulativeLast, uint256 snapshotTime);
     event AddLiquidity(address liquidityProvider, uint256 amountOfTokenA, uint256 amountOfTokenB);
     event RemoveLiquidity(address liquidityRemover, uint256 amountOfTokenA, uint256 amountOfTokenB);
+    event RegularSwap(
+        address swapper, uint256 amountAIn, uint256 amountBIn, uint256 amountAout, uint256 amountBout, address to
+    );
 
     constructor(address _tokenA, address _tokenB, address _feeBeneficiary) {
         tokenA = IERC20(_tokenA);
@@ -96,7 +99,7 @@ contract UniswapPair is UniswapRewardToken {
         // console.log("debug1");
         UD60x18 UDtokenAInput = convert(tokenAInput);
         UD60x18 UDtokenBInput = convert(tokenBInput);
-        console.log("UDTokenAInput:", UDtokenAInput.unwrap());
+        //console.log("UDTokenAInput:", UDtokenAInput.unwrap());
 
         //what is the minimumAmountOfTokenA
 
@@ -336,6 +339,7 @@ contract UniswapPair is UniswapRewardToken {
     ) external {
         //swap cannot occur if there are no reserves
         //desiredAmountOut must be greater than 0
+        console.log("desiredAmountOut uint:", desiredAmountOut);
 
         require(desiredTokenAddress == address(tokenA) || desiredTokenAddress == address(tokenB), "Invalid Token");
         (
@@ -363,20 +367,30 @@ contract UniswapPair is UniswapRewardToken {
         // then 133.333 must add another 0.3% fee -> 133.3333 + 0.4 = 133.73
         //  then round UP so X is 134
 
-        uint256 currentK = currentReserveOfDesiredToken * currentReserveOfCollateralToken;
         //TODO: Set Swap Fees to be configurable
         // Current swap Fee percentage is 0.3%, so multiply k with 100.3%
 
         UD60x18 swapFeePercentage = ud(1.0003e18);
-        //ceiling (smallest whole number gte X)
+
+        //div first
+
+        //getAmountIn
+        uint256 numerator = currentReserveOfCollateralToken * desiredAmountOut;
+        uint256 denominator = currentReserveOfDesiredToken - desiredAmountOut;
+
+        uint256 numeratorWithSlippageFee = convert(swapFeePercentage.mul(convert(numerator)));
+
         uint256 amountOfCollateralTokenRequired =
-            convert(ceil(convert(currentK) / convert(desiredAmountOut)).mul(swapFeePercentage));
+            convert(ceil((convert(numeratorWithSlippageFee) / convert(denominator))));
+
+        console.log("amountOfCollateralTokenRequired:", amountOfCollateralTokenRequired);
+        console.log("maxAmountIn:", maxAmountIn);
         require(amountOfCollateralTokenRequired <= maxAmountIn, "Max Amount Limit too low");
         //transfer the tokens
         //sender transfers
         collateralToken.safeTransferFrom(swapper, address(this), amountOfCollateralTokenRequired);
         //we transfer
-        desiredToken.safeTransferFrom(address(this), swapper, desiredAmountOut);
+        desiredToken.safeTransfer(swapper, desiredAmountOut);
 
         //slippage Fee is applied to output token
         uint256 newBalanceOfDesiredToken = desiredToken.balanceOf(address(this));
@@ -510,13 +524,14 @@ contract UniswapPair is UniswapRewardToken {
                     if (feesMinted > 0) {
                         _mint(_feeBeneficiary, feesMinted);
                     }
-                } else if (lastSnapshotOfProductOfReserves != 0) {
-                    //set state back to zero
-                    //refund feature ?
-                    //So this is not really necessary
-                    lastSnapshotOfProductOfReserves = 0;
                 }
             }
+        } else if (lastSnapshotOfProductOfReserves != 0) {
+            //set state back to zero
+            //refund feature ?
+            //So this is not really necessary
+            lastSnapshotOfProductOfReserves = 0;
         }
     }
 }
+//damnvulnerable defi problem puppet v2
