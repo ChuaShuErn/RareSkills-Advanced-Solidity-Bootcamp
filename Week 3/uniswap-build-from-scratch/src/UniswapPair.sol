@@ -8,7 +8,7 @@ import {console} from "forge-std/console.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {intoUint256} from "@prb/math/ud60x18/Casting.sol";
 import {convert} from "@prb/math/ud60x18/Conversions.sol";
-import {gm, sqrt, ceil} from "@prb/math/ud60x18/Math.sol";
+import {gm, sqrt, ceil, inv} from "@prb/math/ud60x18/Math.sol";
 import "./UniswapRewardToken.sol";
 
 contract UniswapPair is UniswapRewardToken {
@@ -20,9 +20,14 @@ contract UniswapPair is UniswapRewardToken {
     //Anything that is to be converted into UD60x18 is on a 1e18 scale
     uint256 private constant PRB_MATH_SCALE = 1e18;
 
-    uint256 private constant MINIMUM_LIQUIDITY = 1e18;
+    uint256 private constant MINIMUM_LIQUIDITY = 1_000;
 
-    uint256 private constant INITIAL_SHARES = 100_000;
+    /**
+     * @dev allows us to change this percentage derived from Uniswap white paper
+     * default UniswapV2 denominator is 6, indicating that we will mint 1/6th of the increase
+     * to the beneficiary
+     */
+    uint256 public mintFeePercentageDenominator = 6;
 
     //first token
     IERC20 public tokenA;
@@ -40,7 +45,8 @@ contract UniswapPair is UniswapRewardToken {
 
     address public feeBeneficiary;
 
-    uint256 public mintFeePercentage = 3;
+    //TODO: PlaceHolder remove this later
+    address public factory = address(10);
 
     struct SnapshotStruct {
         uint256 snapshotPriceOfA;
@@ -54,7 +60,6 @@ contract UniswapPair is UniswapRewardToken {
     //kLast, renamed to make things clearer for me
     uint256 public lastSnapshotOfProductOfReserves;
 
-    //TODO: Remove this
     bool public feeOn;
 
     event PriceSnapshotTaken(uint256 price0CumulativeLast, uint256 price1CumulativeLast, uint256 snapshotTime);
@@ -71,18 +76,16 @@ contract UniswapPair is UniswapRewardToken {
         blockTimestampLast = block.timestamp;
     }
 
-    //TODO: Remove this method
-    //1. Token Selection
-    // Verify that the tokens are valid, legitimate, and have a purpose in the ecosystem
-    function initilizeTokens(address _tokenA, address _tokenB) external {
-        tokenA = IERC20(_tokenA);
-        tokenB = IERC20(_tokenB);
-        blockTimestampLast = block.timestamp;
+    function setMintFeePercentageDenominator(uint256 newMintFeePercentage) external {
+        //TODO: only factory can call this
+        require(newMintFeePercentage != 0, "Cannot be zero");
+        require(msg.sender == factory, "Only Factory may call this");
+        mintFeePercentageDenominator = newMintFeePercentage;
     }
 
-    function setMintFeePercentage(uint256 newMintFeePercentage) external {
-        //TODO: only factory can call this
-        mintFeePercentage = newMintFeePercentage;
+    function setFeeOn(bool value) external {
+        require(msg.sender == factory, "Only Factory may call this");
+        feeOn = value;
     }
 
     //TODO: Make Internal. We are testing
@@ -92,7 +95,7 @@ contract UniswapPair is UniswapRewardToken {
         uint256 currentBalanceOfTokenA,
         uint256 currentBalanceOfTokenB,
         UD60x18 slippagePercentage
-    ) internal view returns (uint256 refinedTokenA, uint256 refinedTokenB) {
+    ) internal pure returns (uint256 refinedTokenA, uint256 refinedTokenB) {
         //current reserve BalanceOfTokenA and B will not be zero
         //first check token A input
         //convert uint to ud
@@ -125,11 +128,6 @@ contract UniswapPair is UniswapRewardToken {
         } else {
             UD60x18 convertedCurrentBalanceA = convert(currentBalanceOfTokenA);
             UD60x18 optimalAmountofA = (UDtokenBInput * convertedCurrentBalanceA) / convert(currentBalanceOfTokenB);
-            //UD60x18 minimumAmountOfTokenA = UDtokenAInput - slippagePercentage.mul(UDtokenAInput);
-            // console.log("convertedCurrentBalanceA:",convertedCurrentBalanceA.unwrap());
-            // console.log("optimalAmountofA:", convert(optimalAmountofA));
-            // console.log("minimumAmountOfTokenA:",convert(minimumAmountOfTokenA));
-            //require(optimalAmountofA >= minimumAmountOfTokenA, "Insufficient Token A Amount");
 
             //Slippage fee to calculate minimum amount of A doesn't make sense as we have
             // already ensured that there is too much token A
@@ -214,14 +212,18 @@ contract UniswapPair is UniswapRewardToken {
 
         uint256 LPReward;
         if (_totalSupply == 0) {
-            UD60x18 geometricMean = gm(ud(actualADeposited), ud(actualBDeposited));
+            console.log("entered1");
+            console.log("actualADepositedFirst:", actualADeposited);
+            console.log("actualBDepositedFirst:", actualBDeposited);
+            UD60x18 geometricMean = gm(convert(actualADeposited), convert(actualBDeposited));
             console.log("geometricMean:", geometricMean.unwrap());
 
-            LPReward = geometricMean.unwrap() - MINIMUM_LIQUIDITY;
-
+            LPReward = convert(geometricMean) - MINIMUM_LIQUIDITY;
+            console.log("First LPReward:", LPReward);
             // we are going to mint the minimum liquidity
             _mint(0x000000000000000000000000000000000000dEaD, MINIMUM_LIQUIDITY);
         } else {
+            console.log("entered2");
             //This is where Uniswap punishes naive Liquidity Providers
             // if the ratio is 50:50,
             // and the provider somehow provides as 90:10
@@ -231,17 +233,23 @@ contract UniswapPair is UniswapRewardToken {
             // but will take LP reward of the person as if he put in 10:10 (as of the original ratio)
             // so that is why we take the min of
             // tokensAprovided * totalSupply /tokenAReserve, tokensBprovided * totalSupply/tokenBReserve
-            UD60x18 rewardForTokenA = ud(actualADeposited).mul(ud(_totalSupply)).div(ud(_currentBalanceOfA));
-            UD60x18 rewardForTokenB = ud(actualBDeposited).mul(ud(_totalSupply)).div(ud(_currentBalanceOfB));
+            UD60x18 rewardForTokenA =
+                convert(actualADeposited).mul(convert(_totalSupply)).div(convert(_currentBalanceOfA));
+            UD60x18 rewardForTokenB =
+                convert(actualBDeposited).mul(convert(_totalSupply)).div(convert(_currentBalanceOfB));
             //PRb has no min math...?
+            console.log("rewardForTokenA:", convert(rewardForTokenA));
+            console.log("rewardForTokenB:", convert(rewardForTokenB));
             if (rewardForTokenA > rewardForTokenB) {
-                LPReward = rewardForTokenB.unwrap();
+                LPReward = convert(rewardForTokenB);
             } else {
-                LPReward = rewardForTokenA.unwrap();
+                LPReward = convert(rewardForTokenA);
             }
         }
         //check that LPReward is not 0
         //TODO: explain why
+        console.log("entered3");
+        console.log("LPRewardAfter3", LPReward);
         require(LPReward > 0, "LPReward cannot be zero");
         _mint(liquidityProvider, LPReward);
         //internal accounting
@@ -309,6 +317,8 @@ contract UniswapPair is UniswapRewardToken {
         }
         emit RemoveLiquidity(msg.sender, actualAWithdrawn, actualBWithdrawn);
     }
+
+    function calculateAmountIn() internal {}
 
     /**
      * @dev function to swap from tokenA to tokenB and vice versa
@@ -446,7 +456,9 @@ contract UniswapPair is UniswapRewardToken {
         //checking if you are a transaction where timePassed is gt 0
 
         //balanceOfTokenA & balanceOfTokenB is accessing state variable
+        console.log("_updateDebug1");
         if (timePassedSinceLiquidityEvent > 0 && balanceOfTokenA > 0 && balanceOfTokenB > 0) {
+            console.log("_updateDebug2");
             UD60x18 priceOfACL =
                 convert(balanceOfTokenA) / convert(balanceOfTokenB) * convert(timePassedSinceLiquidityEvent);
             UD60x18 priceOfBCL =
@@ -483,7 +495,7 @@ contract UniswapPair is UniswapRewardToken {
         console.log("mintFeeEntered");
         //TODO: Add factory contract to include treasury address
         address _feeBeneficiary = feeBeneficiary;
-        isFeeOn = true;
+        isFeeOn = feeOn;
         //if fee is on
         if (isFeeOn) {
             console.log("lastSnapshotOfProductOfReserves:", lastSnapshotOfProductOfReserves);
@@ -499,10 +511,10 @@ contract UniswapPair is UniswapRewardToken {
                 // oldPoolGm: 1500000000000000000000000000000
                 // newPoolGm: 1500000000000000000000
 
-                UD60x18 oldPoolGm = sqrt(ud(lastSnapshotOfProductOfReserves));
+                UD60x18 oldPoolGm = sqrt(convert(lastSnapshotOfProductOfReserves));
                 //get geometric mean of the new pool
 
-                UD60x18 newPoolGm = gm(ud(_newBalanceOfA), ud(_newBalanceOfB));
+                UD60x18 newPoolGm = gm(convert(_newBalanceOfA), convert(_newBalanceOfB));
                 uint256 feesMinted;
                 console.log("oldPoolGm:", oldPoolGm.unwrap());
                 console.log("newPoolGm:", newPoolGm.unwrap());
@@ -510,6 +522,8 @@ contract UniswapPair is UniswapRewardToken {
                 //if the pool DID increase
                 if (newPoolGm > oldPoolGm) {
                     console.log("pool did increase");
+                    uint256 _mintFeePercentageDenominator = mintFeePercentageDenominator; //gas savings
+
                     //This formula gives you the accumulated fees between
                     //t1 and t2 as a percentage of the liquidity in the pool at t2
                     //This complicated formula is in Uniswap Whitepaper
@@ -518,9 +532,8 @@ contract UniswapPair is UniswapRewardToken {
                     // formula in the whitepaper
                     // if 1/6 fees, then its (1/(1/6)-1) = 5
                     // if its 1/3 fees, then its (1/(1/3)-1) = 2
-                    UD60x18 numerator = convert(_totalSupply).mul(newPoolGm - oldPoolGm);
-                    UD60x18 denominator = newPoolGm.mul(convert(5)).add(oldPoolGm);
-                    feesMinted = convert(numerator.div(denominator));
+                    feesMinted = calculateFeesMinted(_totalSupply, _mintFeePercentageDenominator, oldPoolGm, newPoolGm);
+                    console.log("feesMinted:", feesMinted);
                     if (feesMinted > 0) {
                         _mint(_feeBeneficiary, feesMinted);
                     }
@@ -533,5 +546,21 @@ contract UniswapPair is UniswapRewardToken {
             lastSnapshotOfProductOfReserves = 0;
         }
     }
+
+    function calculateFeesMinted(
+        uint256 _totalSupply,
+        uint256 _mintFeePercentageDenominator,
+        UD60x18 oldPoolGm,
+        UD60x18 newPoolGm
+    ) internal view returns (uint256 feesMinted) {
+        UD60x18 mintFeePercentageMultiplier = inv(ud(1e18).div(convert(_mintFeePercentageDenominator))) - ud(1e18);
+        UD60x18 numerator = convert(_totalSupply).mul(newPoolGm - oldPoolGm);
+        UD60x18 denominator = newPoolGm.mul(mintFeePercentageMultiplier).add(oldPoolGm);
+        console.log("numerator:", convert(numerator));
+        console.log("denominator:", convert(denominator));
+
+        feesMinted = convert(ceil(numerator.div(denominator)));
+    }
 }
+
 //damnvulnerable defi problem puppet v2

@@ -30,4 +30,13 @@ contract UniswapPairHarness is UniswapPair {
     function internalAccounting_harness(uint256 newBalanceofA, uint256 newBalanceofB) external {
         return internalAccounting(newBalanceofA, newBalanceofB);
     }
+
+    function calculateFeesMinted_harness(
+        uint256 _totalSupply,
+        uint256 _mintFeePercentageDenominator,
+        UD60x18 oldPoolGm,
+        UD60x18 newPoolGm
+    ) external view returns (uint256) {
+        return calculateFeesMinted(_totalSupply, _mintFeePercentageDenominator, oldPoolGm, newPoolGm);
+    }
 }

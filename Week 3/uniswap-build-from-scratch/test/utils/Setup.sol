@@ -21,7 +21,7 @@ contract Setup is Test {
     address public LP4 = address(4);
     address public feeBeneficiary = address(5);
     uint256 public PRB_MATH_SCALE = 1e18;
-    uint256 public MINIMUM_LIQUIDITY = 1e18;
+    uint256 public MINIMUM_LIQUIDITY = 1_000;
 
     function setUp() public virtual {
         tokenA = new RareCoin();
