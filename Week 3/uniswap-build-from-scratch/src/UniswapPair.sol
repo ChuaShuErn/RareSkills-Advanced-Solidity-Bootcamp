@@ -10,6 +10,7 @@ import {intoUint256} from "@prb/math/ud60x18/Casting.sol";
 import {convert} from "@prb/math/ud60x18/Conversions.sol";
 import {gm, sqrt, ceil, inv} from "@prb/math/ud60x18/Math.sol";
 import "./UniswapRewardToken.sol";
+import {IUniswapCallee} from "./IUniswapCallee.sol";
 
 contract UniswapPair is UniswapRewardToken {
     using SafeERC20 for IERC20;
@@ -204,26 +205,26 @@ contract UniswapPair is UniswapRewardToken {
 
         uint256 _newBalanceOfA = tokenA.balanceOf(address(this));
         uint256 _newBalanceOfB = tokenB.balanceOf(address(this));
-        console.log("flow1");
+
         uint256 actualADeposited = _newBalanceOfA - _currentBalanceOfA;
         uint256 actualBDeposited = _newBalanceOfB - _currentBalanceOfB;
-        console.log("flow2");
+
         bool isFeeOn = _mintFee(_newBalanceOfA, _newBalanceOfB, _totalSupply);
 
         uint256 LPReward;
         if (_totalSupply == 0) {
-            console.log("entered1");
-            console.log("actualADepositedFirst:", actualADeposited);
-            console.log("actualBDepositedFirst:", actualBDeposited);
+            // console.log("entered1");
+            // console.log("actualADepositedFirst:", actualADeposited);
+            // console.log("actualBDepositedFirst:", actualBDeposited);
             UD60x18 geometricMean = gm(convert(actualADeposited), convert(actualBDeposited));
-            console.log("geometricMean:", geometricMean.unwrap());
+            //console.log("geometricMean:", geometricMean.unwrap());
 
             LPReward = convert(geometricMean) - MINIMUM_LIQUIDITY;
-            console.log("First LPReward:", LPReward);
+            //console.log("First LPReward:", LPReward);
             // we are going to mint the minimum liquidity
             _mint(0x000000000000000000000000000000000000dEaD, MINIMUM_LIQUIDITY);
         } else {
-            console.log("entered2");
+            //console.log("entered2");
             //This is where Uniswap punishes naive Liquidity Providers
             // if the ratio is 50:50,
             // and the provider somehow provides as 90:10
@@ -238,8 +239,8 @@ contract UniswapPair is UniswapRewardToken {
             UD60x18 rewardForTokenB =
                 convert(actualBDeposited).mul(convert(_totalSupply)).div(convert(_currentBalanceOfB));
             //PRb has no min math...?
-            console.log("rewardForTokenA:", convert(rewardForTokenA));
-            console.log("rewardForTokenB:", convert(rewardForTokenB));
+            //console.log("rewardForTokenA:", convert(rewardForTokenA));
+            //console.log("rewardForTokenB:", convert(rewardForTokenB));
             if (rewardForTokenA > rewardForTokenB) {
                 LPReward = convert(rewardForTokenB);
             } else {
@@ -248,8 +249,8 @@ contract UniswapPair is UniswapRewardToken {
         }
         //check that LPReward is not 0
         //TODO: explain why
-        console.log("entered3");
-        console.log("LPRewardAfter3", LPReward);
+        //console.log("entered3");
+        //console.log("LPRewardAfter3", LPReward);
         require(LPReward > 0, "LPReward cannot be zero");
         _mint(liquidityProvider, LPReward);
         //internal accounting
@@ -260,6 +261,53 @@ contract UniswapPair is UniswapRewardToken {
             lastSnapshotOfProductOfReserves = balanceOfTokenA * balanceOfTokenB;
         }
         emit AddLiquidity(msg.sender, actualADeposited, actualBDeposited);
+    }
+
+    function flashLoan(uint256 amountAOut, uint256 amountBOut, address to, bytes calldata data) external {
+        require(amountAOut > 0 || amountBOut > 0, "INSUFFICIENT_OUTPUT_AMOUNT");
+        (IERC20 _tokenA, IERC20 _tokenB, uint256 _reserveA, uint256 _reserveB) =
+            (tokenA, tokenB, balanceOfTokenA, balanceOfTokenB);
+
+        require(address(_tokenA) != to && address(_tokenB) != to, "Invalid to Address");
+        require(_reserveA > amountAOut && _reserveB > amountBOut, "Insufficient Reserves/Liquidity");
+        //optimistically transfer tokens
+
+        if (amountAOut > 0) {
+            _tokenA.safeTransfer(to, amountAOut);
+        }
+        if (amountBOut > 0) {
+            _tokenB.safeTransfer(to, amountBOut);
+        }
+        //contract implement Interface
+        if (data.length > 0) {
+            //must implement uniswapCall method
+            //
+            IUniswapCallee(to).uniswapCall(msg.sender, amountAOut, amountBOut, data);
+        }
+        uint256 currentBalanceOfA = _tokenA.balanceOf(address(this));
+        uint256 currentBalanceOfB = _tokenB.balanceOf(address(this));
+        //for learning purposes as ternary operator is long
+        bool poolAhasIncreasedAfterLoan = currentBalanceOfA > _reserveA - amountAOut;
+        bool poolBhasIncreasedAfterLoan = currentBalanceOfB > _reserveB - amountBOut;
+        uint256 amountOfAReturned;
+        uint256 amountOfBReturned;
+        if (poolAhasIncreasedAfterLoan) {
+            //assume oldBalanceBeforeLoan is 1000
+            //we loan out 1000,
+            // we get back X,
+            //assume currentBalance is now 2000
+            // X = currentBalance - (1000-1000)
+            // X = currentBalance -0
+            // X = 2000;
+
+            amountOfAReturned = currentBalanceOfA - (_reserveA - amountAOut);
+        }
+        if (poolBhasIncreasedAfterLoan) {
+            amountOfBReturned = currentBalanceOfB - (_reserveB - amountBOut);
+        }
+        require(amountOfAReturned > 0 || amountOfBReturned > 0, "Nothing was returned!");
+
+        //Balance x*y=k
     }
 
     /**
@@ -316,6 +364,64 @@ contract UniswapPair is UniswapRewardToken {
             lastSnapshotOfProductOfReserves = balanceOfTokenA * balanceOfTokenB;
         }
         emit RemoveLiquidity(msg.sender, actualAWithdrawn, actualBWithdrawn);
+    }
+
+    function calculateExactTokensForTokensOut(
+        uint256 exactAmountIn,
+        uint256 currentReserveOfDesiredToken,
+        uint256 currentReserveOfCollateralToken
+    ) internal pure returns (uint256 calculatedAmountOut) {
+        UD60x18 swapFeePercentage = ud(0.997e18);
+        UD60x18 amountInAfterFee = convert(exactAmountIn).mul(swapFeePercentage);
+        UD60x18 numerator = amountInAfterFee * convert(currentReserveOfDesiredToken);
+        UD60x18 denominator = convert(currentReserveOfCollateralToken) + amountInAfterFee;
+        calculatedAmountOut = convert(numerator / denominator); //round down;
+    }
+
+    function regularSwapExactTokensForTokens(
+        address desiredTokenAddress,
+        uint256 exactAmountIn,
+        uint256 amountOutMin,
+        address swapper
+    ) external {
+        require(desiredTokenAddress == address(tokenA) || desiredTokenAddress == address(tokenB), "Invalid Token");
+        (
+            IERC20 desiredToken,
+            IERC20 collateralToken,
+            uint256 currentReserveOfDesiredToken,
+            uint256 currentReserveOfCollateralToken
+        ) = desiredTokenAddress == address(tokenA)
+            ? (tokenA, tokenB, balanceOfTokenA, balanceOfTokenB)
+            : (tokenB, tokenA, balanceOfTokenB, balanceOfTokenA);
+
+        uint256 calculatedAmountOut = calculateExactTokensForTokensOut(
+            exactAmountIn, currentReserveOfDesiredToken, currentReserveOfCollateralToken
+        );
+        require(amountOutMin >= calculatedAmountOut, "Insufficient Amount out");
+        collateralToken.safeTransferFrom(swapper, address(this), exactAmountIn);
+        desiredToken.safeTransfer(swapper, calculatedAmountOut);
+        uint256 newBalanceOfDesiredToken = desiredToken.balanceOf(address(this));
+        uint256 newBalanceOfCollateralToken = collateralToken.balanceOf(address(this));
+
+        //update
+        require(
+            newBalanceOfCollateralToken * newBalanceOfDesiredToken
+                >= currentReserveOfDesiredToken * currentReserveOfCollateralToken,
+            "Maintain Constant Product Formula K during swap"
+        );
+        // which one is A, which one is B as its (A,B)
+        if (desiredToken == tokenA) {
+            internalAccounting(newBalanceOfDesiredToken, newBalanceOfCollateralToken);
+        } else {
+            internalAccounting(newBalanceOfCollateralToken, newBalanceOfDesiredToken);
+        }
+        //amount In is taxed at 0.3%
+        // UD60x18 swapFeePercentage = ud(0.997e18);
+        // UD60x18 amountInAfterFee = convert(exactAmountIn).mul(swapFeePercentage);
+        // UD60x18 numerator = amountInAfterFee * convert(currentReserveOfDesiredToken);
+        // UD60x18 denominator = convert(currentReserveOfCollateralToken) + amountInAfterFee;
+
+        // uint256 calculatedAmountOut = convert(numerator / denominator); //round down;
     }
 
     function calculateAmountIn() internal {}
@@ -385,7 +491,9 @@ contract UniswapPair is UniswapRewardToken {
         //div first
 
         //getAmountIn
+
         uint256 numerator = currentReserveOfCollateralToken * desiredAmountOut;
+
         uint256 denominator = currentReserveOfDesiredToken - desiredAmountOut;
 
         uint256 numeratorWithSlippageFee = convert(swapFeePercentage.mul(convert(numerator)));
@@ -393,8 +501,9 @@ contract UniswapPair is UniswapRewardToken {
         uint256 amountOfCollateralTokenRequired =
             convert(ceil((convert(numeratorWithSlippageFee) / convert(denominator))));
 
-        console.log("amountOfCollateralTokenRequired:", amountOfCollateralTokenRequired);
-        console.log("maxAmountIn:", maxAmountIn);
+        console.log("after calc");
+        // console.log("amountOfCollateralTokenRequired:", amountOfCollateralTokenRequired);
+        // console.log("maxAmountIn:", maxAmountIn);
         require(amountOfCollateralTokenRequired <= maxAmountIn, "Max Amount Limit too low");
         //transfer the tokens
         //sender transfers
@@ -456,9 +565,9 @@ contract UniswapPair is UniswapRewardToken {
         //checking if you are a transaction where timePassed is gt 0
 
         //balanceOfTokenA & balanceOfTokenB is accessing state variable
-        console.log("_updateDebug1");
+        //console.log("_updateDebug1");
         if (timePassedSinceLiquidityEvent > 0 && balanceOfTokenA > 0 && balanceOfTokenB > 0) {
-            console.log("_updateDebug2");
+            //console.log("_updateDebug2");
             UD60x18 priceOfACL =
                 convert(balanceOfTokenA) / convert(balanceOfTokenB) * convert(timePassedSinceLiquidityEvent);
             UD60x18 priceOfBCL =

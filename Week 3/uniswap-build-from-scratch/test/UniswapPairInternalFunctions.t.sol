@@ -92,6 +92,19 @@ contract UniswapPairInternalFunctionsTest is Setup {
         assertEq(b, 1e18 - 1);
     }
 
+    function test_calculateExactTokensForTokensOut() public {
+        uint256 currentDesiredTokenReserve = 10_000;
+        uint256 currentCollateralTokenReserve = 10_000;
+        uint256 exactAmountIn = 5000;
+
+        uint256 amountOut = pairContract.calculateExactTokensForTokensOut_harness(
+            exactAmountIn, currentDesiredTokenReserve, currentCollateralTokenReserve
+        );
+        //49,850,000,000/14985000 = 3326.6599
+        // round down to 3326
+        assertEq(amountOut, 3326);
+    }
+
     // function testMintFee() public {
     //     //lets say theres 1e18 each
     //     vm.startPrank(LP1);

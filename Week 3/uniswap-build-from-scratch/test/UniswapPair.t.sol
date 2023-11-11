@@ -138,6 +138,10 @@ contract UniswapPairTest is Setup {
         vm.stopPrank();
     }
 
+    //TODO: make setup functions better
+    // Need to go through liquidity events so that
+    // reserves are updated
+
     // function testRegularSwapWithHugeAmounts() public {
     //     testAddLiquidity();
     //     vm.startPrank(LP1);
@@ -146,12 +150,18 @@ contract UniswapPairTest is Setup {
     //     //set LP1 Balance
     //     uint256 initialTokenA = 2e18;
     //     uint256 initialTokenB = 2e18;
+
     //     tokenA.mint(LP1, initialTokenA);
     //     tokenB.mint(LP1, initialTokenB);
+    //     //so that pool has 15e18 each
+
     //     assertEq(2e18, tokenA.balanceOf(LP1));
     //     assertEq(2e18, tokenB.balanceOf(LP1));
-    //     assertEq(initialReserveOfTokenA, 1500e18);
-    //     assertEq(initialReserveOfTokenB, 1500e18);
+    //     initialReserveOfTokenA = tokenA.balanceOf(address(pairContract));
+    //     initialReserveOfTokenB = tokenB.balanceOf(address(pairContract));
+
+    //     assertEq(initialReserveOfTokenA, 15e18);
+    //     assertEq(initialReserveOfTokenB, 15e18);
     //     console.log("test swap");
     //     uint256 desiredTokenOut = 1.5e18;
     //     uint256 maxAmountIn = 2e18;
@@ -169,11 +179,11 @@ contract UniswapPairTest is Setup {
     //     //assertPool Balance
     //     assertEq(1500e18 - desiredTokenOut, tokenA.balanceOf(address(pairContract)));
     //     console.log("Shu here :", tokenB.balanceOf(address(pairContract)));
-    //     assertEq(1501501951951951951952, tokenB.balanceOf(address(pairContract)));
+    //     // assertEq(1501501951951951951952, tokenB.balanceOf(address(pairContract)));
 
     //     //assertUser Balance
-    //     assertEq(initialTokenA + desiredTokenOut, tokenA.balanceOf(LP1));
-    //     assertEq(initialTokenB - (1501501951951951951952 - 1500e18), tokenB.balanceOf(LP1));
+    //     //assertEq(initialTokenA + desiredTokenOut, tokenA.balanceOf(LP1));
+    //     //assertEq(initialTokenB - (1501501951951951951952 - 1500e18), tokenB.balanceOf(LP1));
     //     vm.stopPrank();
     // }
 
