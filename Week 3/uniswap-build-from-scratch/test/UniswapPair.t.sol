@@ -138,6 +138,19 @@ contract UniswapPairTest is Setup {
         vm.stopPrank();
     }
 
+    function testFlashLoan() public {
+        testAddLiquidity();
+        tokenA.mint(LP2, 10_000);
+        tokenB.mint(LP2, 10_000);
+        uint256 initialA = tokenA.balanceOf(LP2);
+        uint256 initialB = tokenB.balanceOf(LP2);
+        assertEq(initialA, 10_000);
+        assertEq(initialB, 10_000);
+        vm.startPrank(LP2);
+        arbitrageContract.callUniswapSwap();
+        assertGt(initialA, tokenA.balanceOf(LP2));
+    }
+
     //TODO: make setup functions better
     // Need to go through liquidity events so that
     // reserves are updated

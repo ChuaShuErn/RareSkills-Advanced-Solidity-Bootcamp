@@ -11,8 +11,10 @@ import {convert} from "@prb/math/ud60x18/Conversions.sol";
 import {gm, sqrt, ceil, inv} from "@prb/math/ud60x18/Math.sol";
 import "./UniswapRewardToken.sol";
 import {IUniswapCallee} from "./IUniswapCallee.sol";
+//import "prb-math/contracts/PRBMathUD60x18.sol";
 
 contract UniswapPair is UniswapRewardToken {
+    //using PRBMathUD60x18 for uint256;
     using SafeERC20 for IERC20;
 
     //The difference between "conversion" and "casting" is that
@@ -29,6 +31,13 @@ contract UniswapPair is UniswapRewardToken {
      * to the beneficiary
      */
     uint256 public mintFeePercentageDenominator = 6;
+
+    /**
+     * @dev allows us to change the swapFee Percentage from the default 0.3%
+     *     this is a uint meant to be divided by a thousand
+     *    0.003e18 = 0.3%;
+     */
+    uint256 public swapFeePercentageVariable = 0.003e18;
 
     //first token
     IERC20 public tokenA;
@@ -69,6 +78,7 @@ contract UniswapPair is UniswapRewardToken {
     event RegularSwap(
         address swapper, uint256 amountAIn, uint256 amountBIn, uint256 amountAout, uint256 amountBout, address to
     );
+    event FlashLoan(address to, uint256 amountAOut, uint256 amountAIn, uint256 amountBOut, uint256 amountBIn);
 
     constructor(address _tokenA, address _tokenB, address _feeBeneficiary) {
         tokenA = IERC20(_tokenA);
@@ -287,11 +297,11 @@ contract UniswapPair is UniswapRewardToken {
         uint256 currentBalanceOfA = _tokenA.balanceOf(address(this));
         uint256 currentBalanceOfB = _tokenB.balanceOf(address(this));
         //for learning purposes as ternary operator is long
-        bool poolAhasIncreasedAfterLoan = currentBalanceOfA > _reserveA - amountAOut;
-        bool poolBhasIncreasedAfterLoan = currentBalanceOfB > _reserveB - amountBOut;
+        bool balanceOfAhasIncreasedAfterLoan = currentBalanceOfA > _reserveA - amountAOut;
+        bool balanceOfBhasIncreasedAfterLoan = currentBalanceOfB > _reserveB - amountBOut;
         uint256 amountOfAReturned;
         uint256 amountOfBReturned;
-        if (poolAhasIncreasedAfterLoan) {
+        if (balanceOfAhasIncreasedAfterLoan) {
             //assume oldBalanceBeforeLoan is 1000
             //we loan out 1000,
             // we get back X,
@@ -302,12 +312,39 @@ contract UniswapPair is UniswapRewardToken {
 
             amountOfAReturned = currentBalanceOfA - (_reserveA - amountAOut);
         }
-        if (poolBhasIncreasedAfterLoan) {
+        if (balanceOfBhasIncreasedAfterLoan) {
             amountOfBReturned = currentBalanceOfB - (_reserveB - amountBOut);
         }
         require(amountOfAReturned > 0 || amountOfBReturned > 0, "Nothing was returned!");
 
         //Balance x*y=k
+        //Okay we want to check the K snapshot of product reserves is either equal or
+        //greater after the flash loan
+        // IN FACT it needs to be at least equal or greater after accouting the swapFeePercentage
+        // of the tokens coming IN
+        // In other words, the current Balance must be
+        // oldBalanceOfA + amountOfAReturned + (0.3%) * amountOfAReturned
+        // oldBalanceOfB + amountOfBReturned + (0.3%) * amountOfBReturned
+        // 1000 + 1000 + 3 = 2003 (it needs to be at least 2003)
+        uint256 _swapFeePercentage = swapFeePercentageVariable;
+        //100.3% of amountOfAReturned
+        uint256 tokenABalanceAdjusted = calculateAdjustedBalance(_reserveA, amountOfAReturned, _swapFeePercentage);
+        uint256 tokenBBalanceAdjusted = calculateAdjustedBalance(_reserveB, amountOfBReturned, _swapFeePercentage);
+        require((tokenABalanceAdjusted * tokenBBalanceAdjusted) > (_reserveA * _reserveB), "Pool decreased!");
+        internalAccounting(currentBalanceOfA, currentBalanceOfB);
+        //TODO: Resolve Stack Too Deep
+        //emit FlashLoan(to, amountAOut, amountOfAReturned, amountBOut, amountOfBReturned);
+    }
+
+    function calculateAdjustedBalance(uint256 _reserve, uint256 amountReturned, uint256 _swapFeePercentage)
+        internal
+        pure
+        returns (uint256 adjustedBalance)
+    {
+        UD60x18 castedSwapFeePercentage = ud(_swapFeePercentage);
+        UD60x18 amountInReturnedPlusFee =
+            ceil(convert(amountReturned) + convert(amountReturned).mul(castedSwapFeePercentage));
+        adjustedBalance = _reserve + convert(amountInReturnedPlusFee);
     }
 
     /**

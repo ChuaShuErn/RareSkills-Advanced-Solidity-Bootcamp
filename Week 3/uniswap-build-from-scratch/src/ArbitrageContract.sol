@@ -27,11 +27,20 @@ contract ArbitrageContract is IUniswapCallee {
         uniswapAddress = uniswap;
     }
 
+    function callUniswapSwap() public {
+        //low level call
+        bytes memory data =
+            abi.encodeWithSignature("flashLoan(uint256,uint256,address,bytes)", 1000, 1000, address(this), "HI");
+        (bool success,) = uniswapAddress.call(data);
+        require(success, "Uniswap call from Arb Failed");
+    }
+
     function uniswapCall(address callee, uint256 amountAOut, uint256 amountBOut, bytes calldata data) external {
         console.log("ArbitrageContract reached");
         console.log("msg sender:", msg.sender);
         console.log("callee:", callee);
-        IERC20(tokenA).safeTransfer(uniswapAddress, amountAOut);
-        IERC20(tokenB).safeTransfer(uniswapAddress, amountBOut);
+        //console.log("data:", data);
+        IERC20(tokenA).safeTransfer(uniswapAddress, amountAOut + 5);
+        IERC20(tokenB).safeTransfer(uniswapAddress, amountBOut + 5);
     }
 }

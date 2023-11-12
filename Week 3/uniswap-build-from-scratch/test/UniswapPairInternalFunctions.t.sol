@@ -26,6 +26,35 @@ contract UniswapPairInternalFunctionsTest is Setup {
         tokenB.mint(LP2, 5000);
     }
 
+    function testFlashLoanAdjusted() public {
+        uint256 swapFeePercentageVariable = 0.3e18;
+        uint256 amountOfAReturned = 1000;
+        uint256 amountOfBReturned = 1000;
+        // uint256 _reserveA = 1000;
+        // uint256 _reserveB = 1000;
+        assertEq((swapFeePercentageVariable / 100), 0.003e18, "Swap Fee Conversion Worked");
+        UD60x18 _swapFeePercentage = ud(swapFeePercentageVariable / 100); // 0.3% or 0.003e18
+
+        UD60x18 amountOfAReturnPlusFee = convert(amountOfAReturned) + convert(amountOfAReturned).mul(_swapFeePercentage);
+
+        assertEq(convert(ceil(amountOfAReturnPlusFee)), 1003, "After Tax value wrong");
+
+        //assertEq(convert(_swapFeePercentage), convert(ud(0.003e18)), "Not Equal Percentage");
+        //100.3% of amountOfAReturned
+        // uint256 onehundredthree =
+
+        //now swapFeePercentage
+        // uint256 amountOfAReturnPlusFee =
+        //     convert(ceil(convert(amountOfAReturned) + convert(amountOfAReturned).mul(_swapFeePercentage)));
+
+        // assertEq(amountOfAReturnPlusFee, 1003);
+        // //uint256 tokenABalanceAdjusted = _reserveA + amountOfAReturnPlusFee;
+        // uint256 amountOfBReturnPlusFee =
+        //     convert(ceil(convert(amountOfBReturned) + convert(amountOfBReturned).div(_swapFeePercentage)));
+        // assertEq(amountOfBReturnPlusFee, 1003);
+        // uint256 tokenBBalanceAdjusted = _reserveB + amountOfBReturnPlusFee;
+    }
+
     function testInv() public {
         assertEq(6, convert(inv(ud(1e18).div(ud(6e18)))));
         assertEq(3, convert(inv(ud(1e18).div(ud(3e18)))));
@@ -33,6 +62,11 @@ contract UniswapPairInternalFunctionsTest is Setup {
         assertEq(convert(mintFeePercentageMultiplier), 5);
         UD60x18 mintFeePercentageMultiplier2 = inv(ud(1e18).div(convert(3))) - ud(1e18);
         assertEq(convert(mintFeePercentageMultiplier2), 2);
+    }
+
+    function testCalculateAdjustedBalance() public {
+        uint256 result1 = pairContract.calculateAdjustedBalance_harness(1000, 1000, 0.003e18);
+        assertEq(result1, 2003, "Adjusted Balance Incorrect");
     }
 
     function testConfigurableMintFeePercentage() public {

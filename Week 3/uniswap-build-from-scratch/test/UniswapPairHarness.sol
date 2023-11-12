@@ -40,6 +40,14 @@ contract UniswapPairHarness is UniswapPair {
         return calculateFeesMinted(_totalSupply, _mintFeePercentageDenominator, oldPoolGm, newPoolGm);
     }
 
+    function calculateAdjustedBalance_harness(uint256 _reserve, uint256 amountReturned, uint256 _swapFeePercentage)
+        external
+        pure
+        returns (uint256 result)
+    {
+        result = calculateAdjustedBalance(_reserve, amountReturned, _swapFeePercentage);
+    }
+
     function calculateExactTokensForTokensOut_harness(
         uint256 exactAmountIn,
         uint256 currentReserveOfDesiredToken,

@@ -10,11 +10,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {console} from "forge-std/console.sol";
 import {UniswapPairHarness} from "../UniswapPairHarness.sol";
+import {ArbitrageContract} from "../../src/ArbitrageContract.sol";
 
 contract Setup is Test {
     UniswapPairHarness public pairContract;
     RareCoin public tokenA;
     SkillsCoin public tokenB;
+    ArbitrageContract public arbitrageContract;
     address public LP1 = address(1);
     address public LP2 = address(2);
     address public LP3 = address(3);
@@ -27,6 +29,7 @@ contract Setup is Test {
         tokenA = new RareCoin();
         tokenB = new SkillsCoin();
         pairContract = new UniswapPairHarness(address(tokenA),address(tokenB), feeBeneficiary);
+        arbitrageContract = new ArbitrageContract(address(pairContract), address(tokenA),address(tokenB));
         vm.label(LP1, "LP1");
         vm.label(LP2, "LP2");
         vm.label(LP3, "LP3");
@@ -35,5 +38,6 @@ contract Setup is Test {
         vm.label(address(tokenA), "RareCoin");
         vm.label(address(tokenB), "SkillsCoin");
         vm.label(address(pairContract), "UniswapHarness");
+        vm.label(address(arbitrageContract), "Arbitrager");
     }
 }
