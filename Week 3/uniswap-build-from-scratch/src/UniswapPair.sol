@@ -17,10 +17,6 @@ contract UniswapPair is UniswapRewardToken {
     //using PRBMathUD60x18 for uint256;
     using SafeERC20 for IERC20;
 
-    //The difference between "conversion" and "casting" is that
-    //conversion functions multiply or divide the inputs,
-    //whereas casting functions simply cast them.
-    //Anything that is to be converted into UD60x18 is on a 1e18 scale
     uint256 private constant PRB_MATH_SCALE = 1e18;
 
     uint256 private constant MINIMUM_LIQUIDITY = 1_000;
@@ -109,28 +105,16 @@ contract UniswapPair is UniswapRewardToken {
     ) internal pure returns (uint256 refinedTokenA, uint256 refinedTokenB) {
         //current reserve BalanceOfTokenA and B will not be zero
         //first check token A input
-        //convert uint to ud
-        // console.log("debug1");
+
         UD60x18 UDtokenAInput = convert(tokenAInput);
         UD60x18 UDtokenBInput = convert(tokenBInput);
         //console.log("UDTokenAInput:", UDtokenAInput.unwrap());
 
-        //what is the minimumAmountOfTokenA
-
-        //console.log("debug2");
-        //first we compare tokenB
-
         UD60x18 minimumAmountOfTokenB = UDtokenBInput - slippagePercentage.mul(UDtokenBInput);
-        //console.log("minimumAmountocTokenA:", convert(minimumAmountOfTokenA));
-        //console.log("minimumAmountocTokenB:", convert(minimumAmountOfTokenB));
-        //what is the minimumAmountOfTokenB
-        //current Balance is in wei
 
-        //console.log("debug3");
+        //current Balance is in wei
         UD60x18 optimalAmountOfB = (UDtokenAInput * convert(currentBalanceOfTokenB)) / convert(currentBalanceOfTokenA);
 
-        //console.log("optimalAmountOfB:", optimalAmountOfB.unwrap());
-        //console.log("UDtokenBInput:", UDtokenBInput.unwrap());
         if (optimalAmountOfB <= UDtokenBInput) {
             //optimal amount of B must be at least equal to slippageAmountOfTokenB
             require(optimalAmountOfB >= minimumAmountOfTokenB, "Insufficient Token B Amount");
@@ -183,7 +167,6 @@ contract UniswapPair is UniswapRewardToken {
         // frontend precalculates it
         // but let's use this oppurtunity to use the math libraries
 
-        //TODO: check if UniswapV2 allows a deposit of only 1 token
         uint256 _totalSupply = totalSupply();
 
         if (_totalSupply == 0) {
@@ -196,19 +179,10 @@ contract UniswapPair is UniswapRewardToken {
         } else {
             //When there is existing liquidity
             //the LP shares need to be calculated
-            //
+
             (refinedAmountOfTokenA, refinedAmountOfTokenB) =
                 calculateRatio(tokenAInput, tokenBInput, _currentBalanceOfA, _currentBalanceOfB, slippagePercentage);
         }
-
-        //then minimum liquidity will occur
-        //if it is the initial deposit?
-
-        //do the transfer: UniswapV2 will accept any amount of tokens provider
-        //LP Reward will still be calculated by examining the ratio of tokenA and tokenB
-        // Uniswap will not "return" any excess tokens
-        // Price change will create arbitrage oppurtuninity
-        // This is intended/ fine
 
         tokenA.safeTransferFrom(liquidityProvider, address(this), refinedAmountOfTokenA);
         tokenB.safeTransferFrom(liquidityProvider, address(this), refinedAmountOfTokenB);
@@ -223,44 +197,27 @@ contract UniswapPair is UniswapRewardToken {
 
         uint256 LPReward;
         if (_totalSupply == 0) {
-            // console.log("entered1");
-            // console.log("actualADepositedFirst:", actualADeposited);
-            // console.log("actualBDepositedFirst:", actualBDeposited);
             UD60x18 geometricMean = gm(convert(actualADeposited), convert(actualBDeposited));
-            //console.log("geometricMean:", geometricMean.unwrap());
 
             LPReward = convert(geometricMean) - MINIMUM_LIQUIDITY;
-            //console.log("First LPReward:", LPReward);
+
             // we are going to mint the minimum liquidity
             _mint(0x000000000000000000000000000000000000dEaD, MINIMUM_LIQUIDITY);
         } else {
-            //console.log("entered2");
-            //This is where Uniswap punishes naive Liquidity Providers
-            // if the ratio is 50:50,
-            // and the provider somehow provides as 90:10
-            // in the actual Uniswap contract,
-            //they can bypass the Uniswap Router
-            // the pool will accept all tokens
-            // but will take LP reward of the person as if he put in 10:10 (as of the original ratio)
-            // so that is why we take the min of
-            // tokensAprovided * totalSupply /tokenAReserve, tokensBprovided * totalSupply/tokenBReserve
             UD60x18 rewardForTokenA =
                 convert(actualADeposited).mul(convert(_totalSupply)).div(convert(_currentBalanceOfA));
             UD60x18 rewardForTokenB =
                 convert(actualBDeposited).mul(convert(_totalSupply)).div(convert(_currentBalanceOfB));
-            //PRb has no min math...?
-            //console.log("rewardForTokenA:", convert(rewardForTokenA));
-            //console.log("rewardForTokenB:", convert(rewardForTokenB));
+
             if (rewardForTokenA > rewardForTokenB) {
                 LPReward = convert(rewardForTokenB);
             } else {
                 LPReward = convert(rewardForTokenA);
             }
         }
-        //check that LPReward is not 0
+
         //TODO: explain why
-        //console.log("entered3");
-        //console.log("LPRewardAfter3", LPReward);
+
         require(LPReward > 0, "LPReward cannot be zero");
         _mint(liquidityProvider, LPReward);
         //internal accounting
@@ -302,14 +259,6 @@ contract UniswapPair is UniswapRewardToken {
         uint256 amountOfAReturned;
         uint256 amountOfBReturned;
         if (balanceOfAhasIncreasedAfterLoan) {
-            //assume oldBalanceBeforeLoan is 1000
-            //we loan out 1000,
-            // we get back X,
-            //assume currentBalance is now 2000
-            // X = currentBalance - (1000-1000)
-            // X = currentBalance -0
-            // X = 2000;
-
             amountOfAReturned = currentBalanceOfA - (_reserveA - amountAOut);
         }
         if (balanceOfBhasIncreasedAfterLoan) {
@@ -317,15 +266,6 @@ contract UniswapPair is UniswapRewardToken {
         }
         require(amountOfAReturned > 0 || amountOfBReturned > 0, "Nothing was returned!");
 
-        //Balance x*y=k
-        //Okay we want to check the K snapshot of product reserves is either equal or
-        //greater after the flash loan
-        // IN FACT it needs to be at least equal or greater after accouting the swapFeePercentage
-        // of the tokens coming IN
-        // In other words, the current Balance must be
-        // oldBalanceOfA + amountOfAReturned + (0.3%) * amountOfAReturned
-        // oldBalanceOfB + amountOfBReturned + (0.3%) * amountOfBReturned
-        // 1000 + 1000 + 3 = 2003 (it needs to be at least 2003)
         uint256 _swapFeePercentage = swapFeePercentageVariable;
         //100.3% of amountOfAReturned
         uint256 tokenABalanceAdjusted = calculateAdjustedBalance(_reserveA, amountOfAReturned, _swapFeePercentage);

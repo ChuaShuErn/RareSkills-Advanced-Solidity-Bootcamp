@@ -151,7 +151,10 @@ contract UniswapPairTest is Setup {
         assertEq(initialA, 10_000);
         assertEq(initialB, 10_000);
         vm.startPrank(LP2);
-        arbitrageContract.callUniswapSwap();
+        bool toRevert = true;
+        vm.expectRevert();
+        arbitrageContract.callUniswapSwap(1000, 1000, toRevert);
+        arbitrageContract.callUniswapSwap(1000, 1000, !toRevert);
         assertGt(initialA, tokenA.balanceOf(address(arbitrageContract)));
     }
 

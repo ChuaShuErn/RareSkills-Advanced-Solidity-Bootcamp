@@ -27,15 +27,19 @@ contract ArbitrageContract is IUniswapCallee {
         uniswapAddress = uniswap;
     }
 
-    function callUniswapSwap() public {
+    function callUniswapSwap(uint256 tokenAAmount, uint256 tokenBAmount, bool toRevert) public {
         //low level call
-        bytes memory data =
-            abi.encodeWithSignature("flashLoan(uint256,uint256,address,bytes)", 1000, 1000, address(this), "HI");
+
+        bytes memory data = abi.encodeWithSignature(
+            "flashLoan(uint256,uint256,address,bytes)", tokenAAmount, tokenBAmount, address(this), abi.encode(toRevert)
+        );
         (bool success,) = uniswapAddress.call(data);
         require(success, "Uniswap call from Arb Failed");
     }
 
     function uniswapCall(address callee, uint256 amountAOut, uint256 amountBOut, bytes calldata data) external {
+        (bool toRevert) = abi.decode(data, (bool));
+        require(!toRevert, "toRevert is True");
         console.log("ArbitrageContract reached");
         console.log("msg sender:", msg.sender);
         console.log("callee:", callee);
