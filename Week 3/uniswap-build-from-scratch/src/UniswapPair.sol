@@ -11,9 +11,12 @@ import {convert} from "@prb/math/ud60x18/Conversions.sol";
 import {gm, sqrt, ceil, inv} from "@prb/math/ud60x18/Math.sol";
 import "./UniswapRewardToken.sol";
 import {IUniswapCallee} from "./IUniswapCallee.sol";
+import {IERC3156FlashLender} from "./interfaces/IERC3156FlashLender.sol";
+import {IERC3156FlashBorrower} from "./interfaces/IERC3156FlashBorrower.sol";
+//import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 //import "prb-math/contracts/PRBMathUD60x18.sol";
 
-contract UniswapPair is UniswapRewardToken {
+contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
     //using PRBMathUD60x18 for uint256;
     using SafeERC20 for IERC20;
 
@@ -230,7 +233,7 @@ contract UniswapPair is UniswapRewardToken {
         emit AddLiquidity(msg.sender, actualADeposited, actualBDeposited);
     }
 
-    function flashLoan(uint256 amountAOut, uint256 amountBOut, address to, bytes calldata data) external {
+    function originalFlashLoan(uint256 amountAOut, uint256 amountBOut, address to, bytes calldata data) external {
         require(amountAOut > 0 || amountBOut > 0, "INSUFFICIENT_OUTPUT_AMOUNT");
         (IERC20 _tokenA, IERC20 _tokenB, uint256 _reserveA, uint256 _reserveB) =
             (tokenA, tokenB, balanceOfTokenA, balanceOfTokenB);
@@ -424,6 +427,7 @@ contract UniswapPair is UniswapRewardToken {
     // And if for Flash loans -> We need to use Smart Contracts -> address we want the tokens to be in amy not be THAT
     // smart contract. Because a smart contract as discussed could be an arbitrager contract depositing in his Metamask address
     // (EOA)
+    //Question: How to get exactly 1500 USDT?
     function regularSwapTokensForExactTokens(
         address desiredTokenAddress,
         uint256 desiredAmountOut,
@@ -646,6 +650,50 @@ contract UniswapPair is UniswapRewardToken {
         console.log("denominator:", convert(denominator));
 
         feesMinted = convert(ceil(numerator.div(denominator)));
+    }
+    // -- Flash loan Methods --
+
+    function flashFee(address token, uint256 amount) external view returns (uint256) {
+        require(token == address(tokenA) || token == address(tokenB), "INVALID_TOKEN");
+        return _flashFee(amount);
+    }
+
+    function _flashFee(uint256 amount) internal view returns (uint256) {
+        UD60x18 castedPercentage = ud(swapFeePercentageVariable);
+        return convert(convert(amount).mul(castedPercentage));
+    }
+
+    //Demo purposes only
+    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes calldata data)
+        external
+        override
+        returns (bool)
+    {
+        require(token == address(tokenA) || token == address(tokenB), "Unsupported Token");
+        require(amount <= _maxFlashLoan(token), "Max Flash loan limit breached");
+        uint256 fee = _flashFee(amount);
+
+        IERC20(token).safeTransfer(address(receiver), amount);
+        require(
+            receiver.onFlashLoan(msg.sender, token, amount, fee, data) == keccak256("ERC3156FlashBorrower.onFlashLoan"),
+            "Flash Lender: Callback failed"
+        );
+
+        uint256 adjustTransferAmt = fee + amount;
+        IERC20(token).safeTransferFrom(address(receiver), address(this), adjustTransferAmt);
+        //check balances
+        uint256 newBalanceofA = tokenA.balanceOf(address(this));
+        uint256 newBalanceofB = tokenB.balanceOf(address(this));
+        internalAccounting(newBalanceofA, newBalanceofB);
+        return true;
+    }
+
+    function maxFlashLoan(address token) external view returns (uint256) {
+        return _maxFlashLoan(token);
+    }
+
+    function _maxFlashLoan(address token) internal view returns (uint256 max) {
+        max = token == address(tokenA) ? balanceOfTokenA : balanceOfTokenB;
     }
 }
 

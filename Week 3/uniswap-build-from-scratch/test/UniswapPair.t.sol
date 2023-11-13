@@ -140,9 +140,7 @@ contract UniswapPairTest is Setup {
 
     function testFlashLoan() public {
         testAddLiquidity();
-        console.log("test1Ahere");
         console.log(tokenA.balanceOf(address(pairContract)));
-        console.log("test1Bhere");
         console.log(tokenB.balanceOf(address(pairContract)));
         tokenA.mint(address(arbitrageContract), 10_000);
         tokenB.mint(address(arbitrageContract), 10_000);
@@ -156,6 +154,23 @@ contract UniswapPairTest is Setup {
         arbitrageContract.callUniswapSwap(1000, 1000, toRevert);
         arbitrageContract.callUniswapSwap(1000, 1000, !toRevert);
         assertGt(initialA, tokenA.balanceOf(address(arbitrageContract)));
+    }
+
+    function testERC3156FlashLoan() public {
+        testAddLiquidity();
+        console.log(tokenA.balanceOf(address(pairContract)));
+        console.log(tokenB.balanceOf(address(pairContract)));
+        vm.startPrank(address(arbitrageContract));
+        tokenA.approve(address(pairContract), 1003);
+        tokenA.mint(address(arbitrageContract), 10_000);
+        tokenB.mint(address(arbitrageContract), 10_000);
+        uint256 initialA = tokenA.balanceOf(address(arbitrageContract));
+        uint256 initialB = tokenB.balanceOf(address(arbitrageContract));
+        assertEq(initialA, 10_000);
+        assertEq(initialB, 10_000);
+        vm.startPrank(LP2);
+        arbitrageContract.initiateBorrow(false);
+        assertEq(tokenA.balanceOf(address(arbitrageContract)), 9997);
     }
 
     //TODO: make setup functions better
