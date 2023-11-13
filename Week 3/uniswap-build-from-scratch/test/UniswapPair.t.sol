@@ -140,15 +140,19 @@ contract UniswapPairTest is Setup {
 
     function testFlashLoan() public {
         testAddLiquidity();
-        tokenA.mint(LP2, 10_000);
-        tokenB.mint(LP2, 10_000);
-        uint256 initialA = tokenA.balanceOf(LP2);
-        uint256 initialB = tokenB.balanceOf(LP2);
+        console.log("test1Ahere");
+        console.log(tokenA.balanceOf(address(pairContract)));
+        console.log("test1Bhere");
+        console.log(tokenB.balanceOf(address(pairContract)));
+        tokenA.mint(address(arbitrageContract), 10_000);
+        tokenB.mint(address(arbitrageContract), 10_000);
+        uint256 initialA = tokenA.balanceOf(address(arbitrageContract));
+        uint256 initialB = tokenB.balanceOf(address(arbitrageContract));
         assertEq(initialA, 10_000);
         assertEq(initialB, 10_000);
         vm.startPrank(LP2);
         arbitrageContract.callUniswapSwap();
-        assertGt(initialA, tokenA.balanceOf(LP2));
+        assertGt(initialA, tokenA.balanceOf(address(arbitrageContract)));
     }
 
     //TODO: make setup functions better
