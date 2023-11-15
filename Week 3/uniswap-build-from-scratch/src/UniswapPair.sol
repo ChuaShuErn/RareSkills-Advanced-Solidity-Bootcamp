@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -13,11 +12,8 @@ import "./UniswapRewardToken.sol";
 import {IUniswapCallee} from "./IUniswapCallee.sol";
 import {IERC3156FlashLender} from "./interfaces/IERC3156FlashLender.sol";
 import {IERC3156FlashBorrower} from "./interfaces/IERC3156FlashBorrower.sol";
-//import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-//import "prb-math/contracts/PRBMathUD60x18.sol";
 
 contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
-    //using PRBMathUD60x18 for uint256;
     using SafeERC20 for IERC20;
 
     uint256 private constant PRB_MATH_SCALE = 1e18;
@@ -38,23 +34,17 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
      */
     uint256 public swapFeePercentageVariable = 0.003e18;
 
-    //first token
     IERC20 public tokenA;
-    //second token
     IERC20 public tokenB;
 
-    //Uniswap does its own accounting for balanceOfTokenA
     uint256 public balanceOfTokenA;
-    //Uniswap does its own accounting for balanceOfTokenB
     uint256 public balanceOfTokenB;
 
-    //cumulative price
     uint256 public priceOfACumulativeLast;
     uint256 public priceOfBCumulativeLast;
 
     address public feeBeneficiary;
 
-    //TODO: PlaceHolder remove this later
     address public factory = address(10);
 
     struct SnapshotStruct {
@@ -66,7 +56,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
 
     uint256 public blockTimestampLast;
 
-    //kLast, renamed to make things clearer for me
     uint256 public lastSnapshotOfProductOfReserves;
 
     bool public feeOn;
@@ -87,7 +76,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
     }
 
     function setMintFeePercentageDenominator(uint256 newMintFeePercentage) external {
-        //TODO: only factory can call this
         require(newMintFeePercentage != 0, "Cannot be zero");
         require(msg.sender == factory, "Only Factory may call this");
         mintFeePercentageDenominator = newMintFeePercentage;
@@ -98,7 +86,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         feeOn = value;
     }
 
-    //TODO: Make Internal. We are testing
     function calculateRatio(
         uint256 tokenAInput,
         uint256 tokenBInput,
@@ -106,29 +93,20 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         uint256 currentBalanceOfTokenB,
         UD60x18 slippagePercentage
     ) internal pure returns (uint256 refinedTokenA, uint256 refinedTokenB) {
-        //current reserve BalanceOfTokenA and B will not be zero
-        //first check token A input
-
         UD60x18 UDtokenAInput = convert(tokenAInput);
         UD60x18 UDtokenBInput = convert(tokenBInput);
-        //console.log("UDTokenAInput:", UDtokenAInput.unwrap());
 
         UD60x18 minimumAmountOfTokenB = UDtokenBInput - slippagePercentage.mul(UDtokenBInput);
 
-        //current Balance is in wei
         UD60x18 optimalAmountOfB = (UDtokenAInput * convert(currentBalanceOfTokenB)) / convert(currentBalanceOfTokenA);
 
         if (optimalAmountOfB <= UDtokenBInput) {
-            //optimal amount of B must be at least equal to slippageAmountOfTokenB
             require(optimalAmountOfB >= minimumAmountOfTokenB, "Insufficient Token B Amount");
 
             return (tokenAInput, convert(optimalAmountOfB));
         } else {
             UD60x18 convertedCurrentBalanceA = convert(currentBalanceOfTokenA);
             UD60x18 optimalAmountofA = (UDtokenBInput * convertedCurrentBalanceA) / convert(currentBalanceOfTokenB);
-
-            //Slippage fee to calculate minimum amount of A doesn't make sense as we have
-            // already ensured that there is too much token A
 
             return (convert(optimalAmountofA), tokenBInput);
         }
@@ -154,35 +132,21 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         uint256 tokenBInput,
         UD60x18 slippagePercentage
     ) external {
-        //Here we will prevent any 0 input for each token
         require(tokenAInput > 0, "Invalid Input");
         require(tokenBInput > 0, "Invalid Input");
         require(slippagePercentage.gt(ud(0)), "Invalid Slippage %");
-        // user wants to deposit deposit X number of tokenA and Y number of tokenB
         uint256 refinedAmountOfTokenA;
         uint256 refinedAmountOfTokenB;
 
-        //storage pointer of the current reserves
         uint256 _currentBalanceOfA = balanceOfTokenA;
         uint256 _currentBalanceOfB = balanceOfTokenB;
-
-        // how to handle decimal for slippage percentage
-        // frontend precalculates it
-        // but let's use this oppurtunity to use the math libraries
 
         uint256 _totalSupply = totalSupply();
 
         if (_totalSupply == 0) {
-            //initialDeposit, this is the ratio now
             refinedAmountOfTokenA = tokenAInput;
             refinedAmountOfTokenB = tokenBInput;
-
-            //mint minimum liquidity to the contract
-            //mint LPreward to the liquidityProvider
         } else {
-            //When there is existing liquidity
-            //the LP shares need to be calculated
-
             (refinedAmountOfTokenA, refinedAmountOfTokenB) =
                 calculateRatio(tokenAInput, tokenBInput, _currentBalanceOfA, _currentBalanceOfB, slippagePercentage);
         }
@@ -204,7 +168,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
 
             LPReward = convert(geometricMean) - MINIMUM_LIQUIDITY;
 
-            // we are going to mint the minimum liquidity
             _mint(0x000000000000000000000000000000000000dEaD, MINIMUM_LIQUIDITY);
         } else {
             UD60x18 rewardForTokenA =
@@ -219,14 +182,10 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
             }
         }
 
-        //TODO: explain why
-
         require(LPReward > 0, "LPReward cannot be zero");
         _mint(liquidityProvider, LPReward);
-        //internal accounting
         internalAccounting(_newBalanceOfA, _newBalanceOfB);
 
-        // check the balances now
         if (isFeeOn) {
             lastSnapshotOfProductOfReserves = balanceOfTokenA * balanceOfTokenB;
         }
@@ -240,7 +199,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
 
         require(address(_tokenA) != to && address(_tokenB) != to, "Invalid to Address");
         require(_reserveA > amountAOut && _reserveB > amountBOut, "Insufficient Reserves/Liquidity");
-        //optimistically transfer tokens
 
         if (amountAOut > 0) {
             _tokenA.safeTransfer(to, amountAOut);
@@ -248,15 +206,11 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         if (amountBOut > 0) {
             _tokenB.safeTransfer(to, amountBOut);
         }
-        //contract implement Interface
         if (data.length > 0) {
-            //must implement uniswapCall method
-            //
             IUniswapCallee(to).uniswapCall(msg.sender, amountAOut, amountBOut, data);
         }
         uint256 currentBalanceOfA = _tokenA.balanceOf(address(this));
         uint256 currentBalanceOfB = _tokenB.balanceOf(address(this));
-        //for learning purposes as ternary operator is long
         bool balanceOfAhasIncreasedAfterLoan = currentBalanceOfA > _reserveA - amountAOut;
         bool balanceOfBhasIncreasedAfterLoan = currentBalanceOfB > _reserveB - amountBOut;
         uint256 amountOfAReturned;
@@ -270,13 +224,10 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         require(amountOfAReturned > 0 || amountOfBReturned > 0, "Nothing was returned!");
 
         uint256 _swapFeePercentage = swapFeePercentageVariable;
-        //100.3% of amountOfAReturned
         uint256 tokenABalanceAdjusted = calculateAdjustedBalance(_reserveA, amountOfAReturned, _swapFeePercentage);
         uint256 tokenBBalanceAdjusted = calculateAdjustedBalance(_reserveB, amountOfBReturned, _swapFeePercentage);
         require((tokenABalanceAdjusted * tokenBBalanceAdjusted) > (_reserveA * _reserveB), "Pool decreased!");
         internalAccounting(currentBalanceOfA, currentBalanceOfB);
-        //TODO: Resolve Stack Too Deep
-        //emit FlashLoan(to, amountAOut, amountOfAReturned, amountBOut, amountOfBReturned);
     }
 
     function calculateAdjustedBalance(uint256 _reserve, uint256 amountReturned, uint256 _swapFeePercentage)
@@ -301,7 +252,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
      * @param desiredAmountOfLPTokensToBurn uint256, amount of tokens the user needs to burn
      */
     function removeLiquidity(address liquidityRemover, uint256 desiredAmountOfLPTokensToBurn) external {
-        //transfer the LP tokens first
         IERC20 LPToken = IERC20(address(this));
 
         uint256 previousLPTokenBalance = LPToken.balanceOf(address(this));
@@ -309,7 +259,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         uint256 amountOfLPTokensToBurn = LPToken.balanceOf(address(this)) - previousLPTokenBalance;
 
         require(amountOfLPTokensToBurn > 0, "LP Burn cannot be zero");
-        //calculate how much liquidity
         uint256 _currentBalanceOfA = balanceOfTokenA;
         uint256 _currentBalanceOfB = balanceOfTokenB;
         uint256 _totalSupply = totalSupply();
@@ -320,16 +269,10 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         UD60x18 amountOfTokenBToBeWithdrawn =
             ud(_currentBalanceOfB * amountOfLPTokensToBurn).div(ud(_totalSupply * PRB_MATH_SCALE));
 
-        // console.log("amountOfTokenAToBeWithdrawn:",amountOfTokenAToBeWithdrawn.unwrap());
-        // console.log("amountOfTokenBToBeWithdrawn:",amountOfTokenBToBeWithdrawn.unwrap());
-        //amount of token to be withdrawn is greater than the balance wtf im using the library wrong
-
         require(amountOfTokenAToBeWithdrawn > ud(0), "Insuffient LP tokens to burn for A");
         require(amountOfTokenBToBeWithdrawn > ud(0), "Insuffient LP tokens to burn for B");
 
-        //burn
         _burn(address(this), amountOfLPTokensToBurn);
-        //send tokens over
         uint256 actualAWithdrawn = amountOfTokenAToBeWithdrawn.unwrap();
         uint256 actualBWithdrawn = amountOfTokenBToBeWithdrawn.unwrap();
 
@@ -338,7 +281,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
 
         uint256 newBalanceofA = tokenA.balanceOf(address(this));
         uint256 newBalanceofB = tokenB.balanceOf(address(this));
-        //internal accounting
         internalAccounting(newBalanceofA, newBalanceofB);
         if (isFeeOn) {
             lastSnapshotOfProductOfReserves = balanceOfTokenA * balanceOfTokenB;
@@ -355,7 +297,7 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         UD60x18 amountInAfterFee = convert(exactAmountIn).mul(swapFeePercentage);
         UD60x18 numerator = amountInAfterFee * convert(currentReserveOfDesiredToken);
         UD60x18 denominator = convert(currentReserveOfCollateralToken) + amountInAfterFee;
-        calculatedAmountOut = convert(numerator / denominator); //round down;
+        calculatedAmountOut = convert(numerator / denominator);
     }
 
     function regularSwapExactTokensForTokens(
@@ -383,25 +325,16 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         uint256 newBalanceOfDesiredToken = desiredToken.balanceOf(address(this));
         uint256 newBalanceOfCollateralToken = collateralToken.balanceOf(address(this));
 
-        //update
         require(
             newBalanceOfCollateralToken * newBalanceOfDesiredToken
                 >= currentReserveOfDesiredToken * currentReserveOfCollateralToken,
             "Maintain Constant Product Formula K during swap"
         );
-        // which one is A, which one is B as its (A,B)
         if (desiredToken == tokenA) {
             internalAccounting(newBalanceOfDesiredToken, newBalanceOfCollateralToken);
         } else {
             internalAccounting(newBalanceOfCollateralToken, newBalanceOfDesiredToken);
         }
-        //amount In is taxed at 0.3%
-        // UD60x18 swapFeePercentage = ud(0.997e18);
-        // UD60x18 amountInAfterFee = convert(exactAmountIn).mul(swapFeePercentage);
-        // UD60x18 numerator = amountInAfterFee * convert(currentReserveOfDesiredToken);
-        // UD60x18 denominator = convert(currentReserveOfCollateralToken) + amountInAfterFee;
-
-        // uint256 calculatedAmountOut = convert(numerator / denominator); //round down;
     }
 
     function calculateAmountIn() internal {}
@@ -418,24 +351,12 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
      * @param maxAmountIn: uint256, maximum amount of token they want to swap with
      * @param swapper: address, swapper address
      */
-    //How do we know if the swap entails
-    //"swapTokensforExactTokens",
-    // "swapExactTokensForTokens"
-    // we are going to make another method for that
-    //Question: In Uniswap, the address argument is named `to`. Why is it not `swapper`
-    // Best Guess: Assume we use uniswap the regular way, the 'to' address is the EOA interacting with Uniswap
-    // And if for Flash loans -> We need to use Smart Contracts -> address we want the tokens to be in amy not be THAT
-    // smart contract. Because a smart contract as discussed could be an arbitrager contract depositing in his Metamask address
-    // (EOA)
-    //Question: How to get exactly 1500 USDT?
     function regularSwapTokensForExactTokens(
         address desiredTokenAddress,
         uint256 desiredAmountOut,
         uint256 maxAmountIn,
         address swapper
     ) external {
-        //swap cannot occur if there are no reserves
-        //desiredAmountOut must be greater than 0
         console.log("desiredAmountOut uint:", desiredAmountOut);
 
         require(desiredTokenAddress == address(tokenA) || desiredTokenAddress == address(tokenB), "Invalid Token");
@@ -447,31 +368,8 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         ) = desiredTokenAddress == address(tokenA)
             ? (tokenA, tokenB, balanceOfTokenA, balanceOfTokenB)
             : (tokenB, tokenA, balanceOfTokenB, balanceOfTokenA);
-        //given an input of desiredAmountOut of desiredToken (Let's say Token A)
-
-        // 1. retrieve the required amount (requiredAmount) of Token B to swap for Token A
-
-        //suppose reserve of tokenA is 100, and tokenB is 200
-        // k = 200 * 100 = 20_000
-        // now we want to swap X amount of tokenA for exactly 50 tokenB
-        // What is X? and we need to swap in X + 0.3%(fees) for 50 tokenB
-
-        // Okay, so we know that the ending reserve for token B is 200-50 = 150
-        //I need some way to figure out which is the collateral tokenA or TokenB
-        //there should be some core swapping logic of amount out
-
-        // given that K is 20_000, the tokenA needed to be swapped is 20_000 / 150 = 133.333
-        // then 133.333 must add another 0.3% fee -> 133.3333 + 0.4 = 133.73
-        //  then round UP so X is 134
-
-        //TODO: Set Swap Fees to be configurable
-        // Current swap Fee percentage is 0.3%, so multiply k with 100.3%
 
         UD60x18 swapFeePercentage = ud(1.0003e18);
-
-        //div first
-
-        //getAmountIn
 
         uint256 numerator = currentReserveOfCollateralToken * desiredAmountOut;
 
@@ -483,26 +381,18 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
             convert(ceil((convert(numeratorWithSlippageFee) / convert(denominator))));
 
         console.log("after calc");
-        // console.log("amountOfCollateralTokenRequired:", amountOfCollateralTokenRequired);
-        // console.log("maxAmountIn:", maxAmountIn);
         require(amountOfCollateralTokenRequired <= maxAmountIn, "Max Amount Limit too low");
-        //transfer the tokens
-        //sender transfers
         collateralToken.safeTransferFrom(swapper, address(this), amountOfCollateralTokenRequired);
-        //we transfer
         desiredToken.safeTransfer(swapper, desiredAmountOut);
 
-        //slippage Fee is applied to output token
         uint256 newBalanceOfDesiredToken = desiredToken.balanceOf(address(this));
         uint256 newBalanceOfCollateralToken = collateralToken.balanceOf(address(this));
 
-        //update
         require(
             newBalanceOfCollateralToken * newBalanceOfDesiredToken
                 >= currentReserveOfDesiredToken * currentReserveOfCollateralToken,
             "Maintain Constant Product Formula K during swap"
         );
-        // which one is A, which one is B as its (A,B)
         if (desiredToken == tokenA) {
             internalAccounting(newBalanceOfDesiredToken, newBalanceOfCollateralToken);
         } else {
@@ -517,48 +407,18 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
      *    @param newBalanceofB uint256, new total amount of Token B in this liquidity pool
      *    is uint256 because tokens are calculated in wei
      */
-    //TODO: change back to private
     function internalAccounting(uint256 newBalanceofA, uint256 newBalanceofB) internal {
-        //Question: Why does _update in uniswap also take _reserve0, and _reserve1?
-        //Best Guess: gas savings, Reading from State Variables multiple times is costly
-        // than reading a memory varialbe
-        // Uniswap only accesses the state variable to update State ONCE,
-        //  memory pointer for that uint256 would do the Math Part just fine
-
-        // Uniswap Original Code
-        //  if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
-        //     // * never overflows, and + overflow is desired
-        //     price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
-        //     price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
-        // }
-
-        //In practice, when you want to calculate a TWAP over an interval,
-        // you would need two points in time the beginning and the end of the desired
-        // interval
-
-        // In UniswapV2, priceCumulativeLast is always overriden. How can we calculate
-        // the TWAP if we only have the latest point in time?
-        // We have to store "checkpoints" of price cumulative last somewhere (offchain usually)
-        // or emit Events
         uint256 currentTime = block.timestamp;
         uint256 timePassedSinceLiquidityEvent = currentTime - blockTimestampLast;
 
-        //checking if you are a transaction where timePassed is gt 0
-
-        //balanceOfTokenA & balanceOfTokenB is accessing state variable
-        //console.log("_updateDebug1");
         if (timePassedSinceLiquidityEvent > 0 && balanceOfTokenA > 0 && balanceOfTokenB > 0) {
-            //console.log("_updateDebug2");
             UD60x18 priceOfACL =
                 convert(balanceOfTokenA) / convert(balanceOfTokenB) * convert(timePassedSinceLiquidityEvent);
             UD60x18 priceOfBCL =
                 convert(balanceOfTokenB) / convert(balanceOfTokenA) * convert(timePassedSinceLiquidityEvent);
             priceOfACumulativeLast += convert(priceOfACL);
             priceOfBCumulativeLast += convert(priceOfBCL);
-            //event way
             emit PriceSnapshotTaken(priceOfACumulativeLast, priceOfBCumulativeLast, currentTime);
-            //contract variable way
-            //but this one is not so good, how to get a good range?
             snapshotMap[currentTime] = SnapshotStruct(balanceOfTokenA, balanceOfTokenB);
         }
 
@@ -577,51 +437,30 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
      * and not for trade for gas savings
      *
      */
-    //TODO: Change back to private
     function _mintFee(uint256 _newBalanceOfA, uint256 _newBalanceOfB, uint256 _totalSupply)
         internal
         returns (bool isFeeOn)
     {
         console.log("mintFeeEntered");
-        //TODO: Add factory contract to include treasury address
         address _feeBeneficiary = feeBeneficiary;
         isFeeOn = feeOn;
-        //if fee is on
         if (isFeeOn) {
             console.log("lastSnapshotOfProductOfReserves:", lastSnapshotOfProductOfReserves);
-            //and that kLast is not zero
             if (lastSnapshotOfProductOfReserves != 0) {
-                //get the geometric mean of the old pool
                 console.log("ud(_newBalanceOfA):", ud(_newBalanceOfA).unwrap());
                 console.log("ud(_newBalanceOfB):", ud(_newBalanceOfB).unwrap());
-                //overflow
-
-                //TODO: old pool gm and new pool gm calculation is wrong
-                //to handle overflow for sqrt
-                // oldPoolGm: 1500000000000000000000000000000
-                // newPoolGm: 1500000000000000000000
 
                 UD60x18 oldPoolGm = sqrt(convert(lastSnapshotOfProductOfReserves));
-                //get geometric mean of the new pool
 
                 UD60x18 newPoolGm = gm(convert(_newBalanceOfA), convert(_newBalanceOfB));
                 uint256 feesMinted;
                 console.log("oldPoolGm:", oldPoolGm.unwrap());
                 console.log("newPoolGm:", newPoolGm.unwrap());
 
-                //if the pool DID increase
                 if (newPoolGm > oldPoolGm) {
                     console.log("pool did increase");
-                    uint256 _mintFeePercentageDenominator = mintFeePercentageDenominator; //gas savings
+                    uint256 _mintFeePercentageDenominator = mintFeePercentageDenominator;
 
-                    //This formula gives you the accumulated fees between
-                    //t1 and t2 as a percentage of the liquidity in the pool at t2
-                    //This complicated formula is in Uniswap Whitepaper
-                    //https://uniswap.org/whitepaper.pdf
-                    // So numerator and Denomintor is just the code version of the
-                    // formula in the whitepaper
-                    // if 1/6 fees, then its (1/(1/6)-1) = 5
-                    // if its 1/3 fees, then its (1/(1/3)-1) = 2
                     feesMinted = calculateFeesMinted(_totalSupply, _mintFeePercentageDenominator, oldPoolGm, newPoolGm);
                     console.log("feesMinted:", feesMinted);
                     if (feesMinted > 0) {
@@ -630,9 +469,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
                 }
             }
         } else if (lastSnapshotOfProductOfReserves != 0) {
-            //set state back to zero
-            //refund feature ?
-            //So this is not really necessary
             lastSnapshotOfProductOfReserves = 0;
         }
     }
@@ -651,7 +487,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
 
         feesMinted = convert(ceil(numerator.div(denominator)));
     }
-    // -- Flash loan Methods --
 
     function flashFee(address token, uint256 amount) external view returns (uint256) {
         require(token == address(tokenA) || token == address(tokenB), "INVALID_TOKEN");
@@ -663,7 +498,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         return convert(convert(amount).mul(castedPercentage));
     }
 
-    //Demo purposes only
     function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes calldata data)
         external
         override
@@ -681,7 +515,6 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
 
         uint256 adjustTransferAmt = fee + amount;
         IERC20(token).safeTransferFrom(address(receiver), address(this), adjustTransferAmt);
-        //check balances
         uint256 newBalanceofA = tokenA.balanceOf(address(this));
         uint256 newBalanceofB = tokenB.balanceOf(address(this));
         internalAccounting(newBalanceofA, newBalanceofB);
@@ -696,5 +529,3 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         max = token == address(tokenA) ? balanceOfTokenA : balanceOfTokenB;
     }
 }
-
-//damnvulnerable defi problem puppet v2
