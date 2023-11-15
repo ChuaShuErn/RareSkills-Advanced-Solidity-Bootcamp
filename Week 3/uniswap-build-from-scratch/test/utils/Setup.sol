@@ -14,6 +14,7 @@ import {ArbitrageContract} from "../../src/ArbitrageContract.sol";
 
 contract Setup is Test {
     UniswapPairHarness public pairContract;
+    UniswapPair public realPairContract;
     RareCoin public tokenA;
     SkillsCoin public tokenB;
     ArbitrageContract public arbitrageContract;
@@ -29,6 +30,7 @@ contract Setup is Test {
         tokenA = new RareCoin();
         tokenB = new SkillsCoin();
         pairContract = new UniswapPairHarness(address(tokenA),address(tokenB), feeBeneficiary);
+        realPairContract = new UniswapPair(address(tokenA),address(tokenB),feeBeneficiary);
         arbitrageContract = new ArbitrageContract(address(pairContract), address(tokenA),address(tokenB));
         vm.label(LP1, "LP1");
         vm.label(LP2, "LP2");
@@ -38,6 +40,7 @@ contract Setup is Test {
         vm.label(address(tokenA), "RareCoin");
         vm.label(address(tokenB), "SkillsCoin");
         vm.label(address(pairContract), "UniswapHarness");
+        vm.label(address(realPairContract), "UniswapPair");
         vm.label(address(arbitrageContract), "Arbitrager");
     }
 }
