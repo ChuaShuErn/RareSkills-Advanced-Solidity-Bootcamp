@@ -61,6 +61,8 @@ contract PoolSharesTest is Setup {
         uint256 expectedReserveB = (reserveB * lp1Proportion) / 1e18;
 
         // Assert that the expected reserves match the LP1's initial contributions
+        // Wait RE_DO
+
         assert(expectedReserveA == lp1InitialContributionA && expectedReserveB == lp1InitialContributionB);
     }
 
