@@ -8,7 +8,7 @@ import {console} from "forge-std/console.sol";
 import {UD60x18, ud} from "@prb/math/UD60x18.sol";
 import {intoUint256} from "@prb/math/ud60x18/Casting.sol";
 import {convert} from "@prb/math/ud60x18/Conversions.sol";
-import {gm, sqrt, ceil, inv} from "@prb/math/ud60x18/Math.sol";
+import {gm, sqrt, ceil, inv, floor} from "@prb/math/ud60x18/Math.sol";
 import "./UniswapRewardToken.sol";
 import {IUniswapCallee} from "./IUniswapCallee.sol";
 import {IERC3156FlashLender} from "./interfaces/IERC3156FlashLender.sol";
@@ -237,8 +237,15 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         returns (uint256 adjustedBalance)
     {
         UD60x18 castedSwapFeePercentage = ud(_swapFeePercentage);
+        // we want floor because we are rounding in favour of the pool
+        // the old snapshot of K needs to be lte to new snapshot of k
+        // so since this function calculates the WOULD BE new snapshot of k
+        // (given the loan returned + fee)
+        // Rounding DOWN would make it such that
+        // flash borrowers need to return MORE, hence floor
+
         UD60x18 amountInReturnedPlusFee =
-            ceil(convert(amountReturned) + convert(amountReturned).mul(castedSwapFeePercentage));
+            floor(convert(amountReturned) + convert(amountReturned).mul(castedSwapFeePercentage));
         adjustedBalance = _reserve + convert(amountInReturnedPlusFee);
     }
 
@@ -264,6 +271,8 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         uint256 _currentBalanceOfB = balanceOfTokenB;
         uint256 _totalSupply = totalSupply();
         bool isFeeOn = _mintFee(_currentBalanceOfA, _currentBalanceOfB, _totalSupply);
+
+        //NOT Rounding in favour of the pool
 
         UD60x18 amountOfTokenAToBeWithdrawn =
             ud(_currentBalanceOfA * amountOfLPTokensToBurn).div(ud(_totalSupply * PRB_MATH_SCALE));
