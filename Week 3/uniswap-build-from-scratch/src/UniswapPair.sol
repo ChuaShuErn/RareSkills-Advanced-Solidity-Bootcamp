@@ -261,31 +261,40 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
      */
     function removeLiquidity(address liquidityRemover, uint256 desiredAmountOfLPTokensToBurn) external {
         IERC20 LPToken = IERC20(address(this));
-
+        console.log("desiredAmountOfLPTokensToBurn:", desiredAmountOfLPTokensToBurn);
+        console.log("totalSupplybefore", totalSupply());
         uint256 previousLPTokenBalance = LPToken.balanceOf(address(this));
         LPToken.safeTransferFrom(liquidityRemover, address(this), desiredAmountOfLPTokensToBurn);
+        console.log("debug1");
         uint256 amountOfLPTokensToBurn = LPToken.balanceOf(address(this)) - previousLPTokenBalance;
-
+        console.log("debug2");
         require(amountOfLPTokensToBurn > 0, "LP Burn cannot be zero");
+
         uint256 _currentBalanceOfA = balanceOfTokenA;
+
         uint256 _currentBalanceOfB = balanceOfTokenB;
         uint256 _totalSupply = totalSupply();
+        console.log("debug3");
         bool isFeeOn = _mintFee(_currentBalanceOfA, _currentBalanceOfB, _totalSupply);
 
         //NOT Rounding in favour of the pool
-
+        console.log("debug4");
         UD60x18 amountOfTokenAToBeWithdrawn =
-            ud(_currentBalanceOfA * amountOfLPTokensToBurn).div(ud(_totalSupply * PRB_MATH_SCALE));
+            convert(_currentBalanceOfA * amountOfLPTokensToBurn).div(ud(_totalSupply * PRB_MATH_SCALE));
+        console.log("debug5");
         UD60x18 amountOfTokenBToBeWithdrawn =
-            ud(_currentBalanceOfB * amountOfLPTokensToBurn).div(ud(_totalSupply * PRB_MATH_SCALE));
-
-        require(amountOfTokenAToBeWithdrawn > ud(0), "Insuffient LP tokens to burn for A");
-        require(amountOfTokenBToBeWithdrawn > ud(0), "Insuffient LP tokens to burn for B");
-
+            convert(_currentBalanceOfB * amountOfLPTokensToBurn).div(ud(_totalSupply * PRB_MATH_SCALE));
+        console.log("debug6");
+        //require(amountOfTokenAToBeWithdrawn > ud(0), "Insuffient LP tokens to burn for A");
+        console.log("debug7");
+        //require(amountOfTokenBToBeWithdrawn > ud(0), "Insuffient LP tokens to burn for B");
+        console.log("debug8");
         _burn(address(this), amountOfLPTokensToBurn);
-        uint256 actualAWithdrawn = amountOfTokenAToBeWithdrawn.unwrap();
-        uint256 actualBWithdrawn = amountOfTokenBToBeWithdrawn.unwrap();
-
+        uint256 actualAWithdrawn = convert(amountOfTokenAToBeWithdrawn);
+        uint256 actualBWithdrawn = convert(amountOfTokenBToBeWithdrawn);
+        console.log("totalSupply:", totalSupply());
+        require(actualAWithdrawn > 0, "Insufficient LP tokens to burn for A");
+        require(actualBWithdrawn > 0, "Insufficient LP tokens to burn for B");
         tokenA.safeTransfer(liquidityRemover, actualAWithdrawn);
         tokenB.safeTransfer(liquidityRemover, actualBWithdrawn);
 

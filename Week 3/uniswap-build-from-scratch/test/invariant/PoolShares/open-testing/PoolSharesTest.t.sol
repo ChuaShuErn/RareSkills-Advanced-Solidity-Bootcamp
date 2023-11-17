@@ -35,6 +35,19 @@ contract PoolSharesTest is Setup {
         vm.stopPrank();
     }
 
+    function removeLiquidity_helper() public returns (uint256 tokenAReceived, uint256 tokenBReceived) {
+        vm.startPrank(LP1);
+        tokenA.approve(address(target), 1000e18);
+        tokenB.approve(address(target), 1000e18);
+        target.approve(address(target), 1000e18);
+        uint256 currentBalanceOfA = tokenA.balanceOf(LP1);
+        uint256 currentBalanceOfB = tokenB.balanceOf(LP1);
+        uint256 allOfLP1Tokens = target.balanceOf(LP1);
+        target.removeLiquidity(LP1, allOfLP1Tokens);
+        uint256 newBalanceOfA = tokenA.balanceOf(LP1);
+        uint256 newBalanceOfB = tokenB.balanceOf(LP1);
+        (tokenAReceived, tokenBReceived) = (newBalanceOfA - currentBalanceOfA, newBalanceOfB - currentBalanceOfB);
+    }
     // function invariant_liquidityTokenProportionality() public {
     //     //function to calculate ratio
     //     uint256 LP1TokenBalance = target.balanceOf(LP1);
@@ -49,7 +62,7 @@ contract PoolSharesTest is Setup {
     //     uint256 LP1ActualReserveB = convert(convert(_balanceOfB).mul(LP1Proportion));
 
     // }
-    function invariant_liquidityTokenProportionality() public view {
+    function invariant_liquidityTokenProportionalityForFirstLP() public {
         uint256 lp1TokenBalance = target.balanceOf(LP1);
         uint256 totalSupply = target.totalSupply();
         uint256 lp1Proportion = calculateProportion(lp1TokenBalance, totalSupply);
@@ -57,13 +70,23 @@ contract PoolSharesTest is Setup {
         // Calculate expected reserves based on initial contributions and total pool size
         uint256 reserveA = target.balanceOfTokenA();
         uint256 reserveB = target.balanceOfTokenB();
+        // ok the problem is
+        // we are not accounting the minimum liquidity that is minted to 0xdead
+        // what is the operation below doing?
+
         uint256 expectedReserveA = (reserveA * lp1Proportion) / 1e18;
         uint256 expectedReserveB = (reserveB * lp1Proportion) / 1e18;
+        console.log("expectedReserveA:", expectedReserveA); //9_000; where initialContribution is 10_000
+        // so we shouldnt use initialContribution to test
+        // it has to factor in minimum liquidity
 
+        //Do Remove Liquidity
+        (uint256 tokenAReceived, uint256 tokenBReceived) = removeLiquidity_helper();
+        console.log("tokenAReceived:", tokenAReceived);
+        console.log("tokenBReceived:", tokenBReceived);
         // Assert that the expected reserves match the LP1's initial contributions
-        // Wait RE_DO
-
-        assert(expectedReserveA == lp1InitialContributionA && expectedReserveB == lp1InitialContributionB);
+        //
+        assert(expectedReserveA == tokenAReceived && expectedReserveB == tokenBReceived);
     }
 
     function calculateProportion(uint256 lpTokenBalance, uint256 totalLiquidityTokenSupply)
@@ -75,4 +98,12 @@ contract PoolSharesTest is Setup {
         return (lpTokenBalance * 1e18) / totalLiquidityTokenSupply;
         // Returns the proportion as a percentage with 18 decimal places.
     }
+
+    //so we need a function that will calculate the amount returned for
+    // X amount of LP tokens burnt
+    //remove Liquidity will emit an event which will tell me amount of tokens burnt
+    //I will redefine the function that will calculate it
+    //    function modifiedRemoveLiquidity(uint256 lpTokensBurnt) returns (uint256 tokenA, uint26 tokenB){
+
+    //    }
 }
