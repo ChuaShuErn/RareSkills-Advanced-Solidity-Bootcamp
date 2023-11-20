@@ -92,7 +92,7 @@ contract UniswapPairInternalFunctionsTest is Setup {
         uint256 tokenBInput = 200;
         uint256 currentBalanceOfTokenA = 10_000;
         uint256 currentBalanceOfTokenB = 10_000;
-        UD60x18 slippageFee = ud(0.03e18);
+        uint256 slippageFee = 0.03e18;
 
         //return ratio should be 200,200
         (uint256 a, uint256 b) = pairContract.calculateRatio_harness(
@@ -114,7 +114,7 @@ contract UniswapPairInternalFunctionsTest is Setup {
         uint256 tokenBInput = 1e18 - 1;
         uint256 currentBalanceOfTokenA = 1e18;
         uint256 currentBalanceOfTokenB = 1e18;
-        UD60x18 slippageFee = ud(0.03e18);
+        uint256 slippageFee = 0.03e18;
 
         //return ratio should be 200,200
         (uint256 a, uint256 b) = pairContract.calculateRatio_harness(

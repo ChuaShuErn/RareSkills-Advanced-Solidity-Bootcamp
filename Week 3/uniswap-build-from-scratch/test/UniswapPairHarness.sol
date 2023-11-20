@@ -14,7 +14,7 @@ contract UniswapPairHarness is UniswapPair {
         uint256 tokenBInput,
         uint256 currentBalanceOfTokenA,
         uint256 currentBalanceOfTokenB,
-        UD60x18 slippagePercentage
+        uint256 slippagePercentage
     ) external view returns (uint256 refinedTokenA, uint256 refinedTokenB) {
         return
             calculateRatio(tokenAInput, tokenBInput, currentBalanceOfTokenA, currentBalanceOfTokenB, slippagePercentage);

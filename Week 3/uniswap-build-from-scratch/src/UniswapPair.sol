@@ -92,12 +92,12 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         uint256 tokenBInput,
         uint256 currentBalanceOfTokenA,
         uint256 currentBalanceOfTokenB,
-        UD60x18 slippagePercentage
+        uint256 slippagePercentage
     ) internal pure returns (uint256 refinedTokenA, uint256 refinedTokenB) {
         UD60x18 UDtokenAInput = convert(tokenAInput);
         UD60x18 UDtokenBInput = convert(tokenBInput);
 
-        UD60x18 minimumAmountOfTokenB = UDtokenBInput - slippagePercentage.mul(UDtokenBInput);
+        UD60x18 minimumAmountOfTokenB = UDtokenBInput - ud(slippagePercentage).mul(UDtokenBInput);
 
         UD60x18 optimalAmountOfB = (UDtokenAInput * convert(currentBalanceOfTokenB)) / convert(currentBalanceOfTokenA);
 
@@ -131,11 +131,11 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         address liquidityProvider,
         uint256 tokenAInput,
         uint256 tokenBInput,
-        UD60x18 slippagePercentage
+        uint256 slippagePercentage
     ) external {
         require(tokenAInput > 0, "Invalid Input");
         require(tokenBInput > 0, "Invalid Input");
-        require(slippagePercentage.gt(ud(0)), "Invalid Slippage %");
+        require(slippagePercentage > 0, "Invalid Slippage %");
         uint256 refinedAmountOfTokenA;
         uint256 refinedAmountOfTokenB;
 
@@ -164,11 +164,14 @@ contract UniswapPair is UniswapRewardToken, IERC3156FlashLender {
         bool isFeeOn = _mintFee(_newBalanceOfA, _newBalanceOfB, _totalSupply);
 
         uint256 LPReward;
+        console.log("debug1a");
         if (_totalSupply == 0) {
             UD60x18 geometricMean = gm(convert(actualADeposited), convert(actualBDeposited));
-
+            console.log("debug2a");
+            require(convert(geometricMean) >= MINIMUM_LIQUIDITY, "GM lower than Min Liquidity");
+            //geometric mean might be lower than minimum liquidity
             LPReward = convert(geometricMean) - MINIMUM_LIQUIDITY;
-
+            console.log("debug3a");
             _mint(0x000000000000000000000000000000000000dEaD, MINIMUM_LIQUIDITY);
         } else {
             UD60x18 rewardForTokenA =

@@ -30,7 +30,7 @@ contract UniswapPairTest is Setup {
         assertEq(0, tokenB.balanceOf(address(pairContract)));
         vm.startPrank(LP1);
         //3% slippage
-        UD60x18 slippagePercentage = ud(0.03e18);
+        uint256 slippagePercentage = 0.03e18;
         //need to do approve
         tokenA.approve(address(pairContract), 10_000);
         tokenB.approve(address(pairContract), 10_000);
