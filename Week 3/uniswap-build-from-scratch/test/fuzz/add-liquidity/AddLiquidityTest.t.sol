@@ -40,4 +40,28 @@ contract AddLiquidityTest is Setup {
         vm.stopPrank();
         assert(oldProduct <= newProduct);
     }
+
+    // function regularSwapExactTokensForTokens(
+    //     address desiredTokenAddress,
+    //     uint256 exactAmountIn,
+    //     uint256 amountOutMin,
+    //     address swapper
+    // )
+
+    function test_regularSwapExactTokensForTokens(uint256 exactAmountIn, uint256 amountOutMin) external {
+        //swapper is LP1
+        //desiredTokenAddress is TokenA
+        exactAmountIn = bound(exactAmountIn, 1, 1e18);
+        amountOutMin = bound(amountOutMin, exactAmountIn, exactAmountIn);
+        uint256 oldBalanceA = tokenA.balanceOf(address(realPairContract));
+        uint256 oldBalanceB = tokenB.balanceOf(address(realPairContract));
+        uint256 oldProduct = oldBalanceA * oldBalanceB;
+        vm.startPrank(LP1);
+        realPairContract.regularSwapExactTokensForTokens(address(tokenA), exactAmountIn, amountOutMin, LP1);
+        uint256 newBalanceA = tokenA.balanceOf(address(realPairContract));
+        uint256 newBalanceB = tokenB.balanceOf(address(realPairContract));
+        uint256 newProduct = newBalanceA * newBalanceB;
+        vm.stopPrank();
+        assert(oldProduct <= newProduct);
+    }
 }
