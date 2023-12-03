@@ -34,3 +34,6 @@
 [submodule "Week 3/uniswap-build-from-scratch/lib/prb-math"]
 	path = Week 3/uniswap-build-from-scratch/lib/prb-math
 	url = https://github.com/PaulRBerg/prb-math
+[submodule "playground/lib/forge-std"]
+	path = playground/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
