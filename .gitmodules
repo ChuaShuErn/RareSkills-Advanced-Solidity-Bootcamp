@@ -37,3 +37,6 @@
 [submodule "playground/lib/forge-std"]
 	path = playground/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "FlashLoanCTF/lib/forge-std"]
+	path = FlashLoanCTF/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
