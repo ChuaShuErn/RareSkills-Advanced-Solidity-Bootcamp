@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.15;
+pragma solidity 0.8.21;
 
 import {Test} from "@forge-std/Test.sol";
 
 import {DeployFlashloanScript} from "@script/DeployFlashloan.s.sol";
-import {FlashloanAttacker} from "@main/FlashLoanCTF/FlashloanAttacker.sol";
+import {FlashLoanAttacker} from "@main/FlashLoanAttacker.sol";
 
 contract FlashloanTest is Test, DeployFlashloanScript {
     string mnemonic = "test test test test test test test test test test test junk";
@@ -16,7 +16,7 @@ contract FlashloanTest is Test, DeployFlashloanScript {
     address lender = address(12);
     address borrower = address(13);
 
-    FlashloanAttacker flashloanAttacker;
+    FlashLoanAttacker flashLoanAttacker;
 
     function setUp() public {
         vm.label(deployer, "Deployer");
@@ -58,13 +58,13 @@ contract FlashloanTest is Test, DeployFlashloanScript {
          * - Do this in 2 transactions or less?
          */
 
-        flashloanAttacker = new FlashloanAttacker(
-            payable(address(amm)),
-            payable(address(lending)),
-            payable(address(flashLoan)),
-            borrower
-        );
-        flashloanAttacker.attack();
+        // flashLoanAttacker = new FlashLoanAttacker(
+        //     payable(address(amm)),
+        //     payable(address(lending)),
+        //     payable(address(flashLoan)),
+        //     borrower
+        // );
+        // flashLoanAttacker.attack();
 
         assertEq(collateralToken.balanceOf(address(lending)), 0 ether, "must fully drain lending contract");
 
