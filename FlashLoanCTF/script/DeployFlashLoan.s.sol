@@ -4,7 +4,7 @@ pragma solidity 0.8.21;
 import {Script} from "@forge-std/Script.sol";
 import {AMM} from "@main/AMM.sol";
 import {CollateralToken} from "@main/CollateralToken.sol";
-import {FlashLender} from "@main/Flashloan.sol";
+import {FlashLender} from "@main/FlashLoan.sol";
 import {Lending} from "@main/Lending.sol";
 
 contract DeployFlashloanScript is Script {

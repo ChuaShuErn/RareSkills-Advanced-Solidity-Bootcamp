@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./AMM.sol";
+import {console2} from "@forge-std/console2.sol";
 
 // assume this is a private pool where only one address can provide LP
 contract Lending {
@@ -72,7 +73,11 @@ contract Lending {
         uint256 lendQuote = (oracle.lendTokenReserve() * loanInfo.borrowedAmount) / oracle.ethReserve();
 
         uint256 collateralRequired = (lendQuote * liquidationThreshold) / collateralContext;
-
+        console2.log("oracle.lendTokenReserve():", oracle.lendTokenReserve());
+        console2.log("oracle.ethReserve():", oracle.ethReserve());
+        console2.log("loanInfo.collateralBalance:", loanInfo.collateralBalance);
+        console2.log("collateralRequired:", collateralRequired);
+        console2.log("difference needed:", loanInfo.collateralBalance - collateralRequired);
         require(loanInfo.collateralBalance < collateralRequired, "Not undercollaterized");
 
         uint256 amount = lendQuote <= token.balanceOf(address(this)) ? lendQuote : loanInfo.collateralBalance;

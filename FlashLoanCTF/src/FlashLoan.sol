@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC3156FlashBorrower.sol";
 import "@openzeppelin/contracts/interfaces/IERC3156FlashLender.sol";
+import "@forge-std/console2.sol";
 
 contract FlashLender is IERC3156FlashLender {
     bytes32 public constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
@@ -35,6 +36,7 @@ contract FlashLender is IERC3156FlashLender {
     {
         require(supportedTokens[token], "FlashLender: Unsupported currency");
         uint256 _fee = _flashFee(token, amount);
+
         require(IERC20(token).transfer(address(receiver), amount), "FlashLender: Transfer failed");
         require(
             receiver.onFlashLoan(msg.sender, token, amount, _fee, data) == CALLBACK_SUCCESS,
