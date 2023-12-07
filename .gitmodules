@@ -40,3 +40,6 @@
 [submodule "FlashLoanCTF/lib/forge-std"]
 	path = FlashLoanCTF/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "FlashLoanCTF/lib/openzeppelin-contracts"]
+	path = FlashLoanCTF/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
