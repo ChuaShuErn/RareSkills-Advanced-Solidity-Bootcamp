@@ -68,23 +68,6 @@ contract FlashloanTest is Test, DeployFlashloanScript {
             // at the end I need to call liquidate and receive to get tokens
     }
 
-    // function test_borrowEthOutputs() public {
-    //     vm.startPrank(lender);
-    //     lending.borrowEth(10 ether);
-    // }
-    function test_trySomething() public beforeEach {
-        vm.startPrank(borrower);
-        lending.liquidate(borrower);
-        //   oracle.lendTokenReserve(): 400000000000000000000
-        //   oracle.ethReserve(): 20000000000000000000
-        //   loanInfo.collateralBalance: 240000000000000000000
-        //   collateralRequired: 180000000000000000000
-        //   difference needed: 60000000000000000000
-        //  uint256 lendQuote = (oracle.lendTokenReserve() * loanInfo.borrowedAmount) / oracle.ethReserve();
-
-        // uint256 collateralRequired = (lendQuote * liquidationThreshold) / collateralContext;
-    }
-
     function test_isSolved() public beforeEach {
         // print states
 
