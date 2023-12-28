@@ -43,3 +43,6 @@
 [submodule "FlashLoanCTF/lib/openzeppelin-contracts"]
 	path = FlashLoanCTF/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "playground/lib/openzeppelin-contracts"]
+	path = playground/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
