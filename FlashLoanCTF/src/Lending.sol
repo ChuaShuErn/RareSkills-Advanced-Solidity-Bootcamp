@@ -69,15 +69,17 @@ contract Lending {
         LoanInfo memory loanInfo = userToLoanInfo[borrower];
         IERC20 token = oracle.lendToken();
         require(loanInfo.borrowedAmount > 0, "Nothing to liquidate");
-
+        console2.log("loanInfo.borrowedAmount:", loanInfo.borrowedAmount);
         uint256 lendQuote = (oracle.lendTokenReserve() * loanInfo.borrowedAmount) / oracle.ethReserve();
 
         uint256 collateralRequired = (lendQuote * liquidationThreshold) / collateralContext;
-        console2.log("oracle.lendTokenReserve():", oracle.lendTokenReserve());
-        console2.log("oracle.ethReserve():", oracle.ethReserve());
+        console2.log("oraclelendTokenReserve():", oracle.lendTokenReserve());
+        console2.log("oracleethReserve():", oracle.ethReserve());
         console2.log("loanInfo.collateralBalance:", loanInfo.collateralBalance);
         console2.log("collateralRequired:", collateralRequired);
-        console2.log("difference needed:", loanInfo.collateralBalance - collateralRequired);
+        console2.log("lendQuote:", lendQuote);
+
+        //console2.log("difference needed:", loanInfo.collateralBalance - collateralRequired);
         require(loanInfo.collateralBalance < collateralRequired, "Not undercollaterized");
 
         uint256 amount = lendQuote <= token.balanceOf(address(this)) ? lendQuote : loanInfo.collateralBalance;

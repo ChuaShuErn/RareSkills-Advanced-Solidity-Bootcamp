@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import {console2} from "forge-std/console2.sol";
+// import {console2} from "forge-std/console2.sol";
 
 contract StorageTest {
     struct User {
@@ -90,15 +90,15 @@ contract StorageTest {
      */
 
     function printUser(User memory user) public pure {
-        console2.log("user user:", user.user);
-        console2.log("user balance:", user.balance);
+        // console2.log("user user:", user.user);
+        // console2.log("user balance:", user.balance);
     }
 
     function printUsers() public view {
-        for (uint256 i = 0; i < users.length; i++) {
-            console2.log("index at:", i);
-            console2.log("user:", users[i].user);
-            console2.log("balance:", users[i].balance);
-        }
+        // for (uint256 i = 0; i < users.length; i++) {
+        //     console2.log("index at:", i);
+        //     console2.log("user:", users[i].user);
+        //     console2.log("balance:", users[i].balance);
+        // }
     }
 }
