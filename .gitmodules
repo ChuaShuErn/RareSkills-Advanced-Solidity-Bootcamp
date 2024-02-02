@@ -46,3 +46,6 @@
 [submodule "playground/lib/openzeppelin-contracts"]
 	path = playground/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "Week 14/erc1155-in-yul/lib/forge-std"]
+	path = Week 14/erc1155-in-yul/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
