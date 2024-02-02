@@ -52,3 +52,6 @@
 [submodule "Week 14/erc1155-in-yul/lib/openzeppelin-contracts"]
 	path = Week 14/erc1155-in-yul/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "Week 14/erc1155-in-yul/lib/deploy-yul"]
+	path = Week 14/erc1155-in-yul/lib/deploy-yul
+	url = https://github.com/crystalbit/deploy-yul
