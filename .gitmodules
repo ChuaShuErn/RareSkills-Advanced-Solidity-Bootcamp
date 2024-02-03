@@ -61,3 +61,6 @@
 [submodule "Week 14/ERC1155-yul/lib/deploy-yul"]
 	path = Week 14/ERC1155-yul/lib/deploy-yul
 	url = https://github.com/crystalbit/deploy-yul
+[submodule "Week 14/ERC1155-yul/lib/solmate"]
+	path = Week 14/ERC1155-yul/lib/solmate
+	url = https://github.com/transmissions11/solmate
