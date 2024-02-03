@@ -1,0 +1,6 @@
+600e600d600039600e6000f3fe600560030160005260206000f3
+
+only first line of this file is used
+we can write comments here
+
+e.g., I compiled Basic.yul and took its bytecode. Then I deleted DUP1 opcode to test the contract without it
