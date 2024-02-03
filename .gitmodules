@@ -58,3 +58,6 @@
 [submodule "Week 14/ERC1155-yul/lib/forge-std"]
 	path = Week 14/ERC1155-yul/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "Week 14/ERC1155-yul/lib/deploy-yul"]
+	path = Week 14/ERC1155-yul/lib/deploy-yul
+	url = https://github.com/crystalbit/deploy-yul
