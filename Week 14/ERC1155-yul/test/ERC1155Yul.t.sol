@@ -176,6 +176,36 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
         assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
     }
 
+    function testTemporaryBalanceOfBatch() public {
+        address[] memory normalizedTos = new address[](2);
+        uint256[] memory normalizedIds = new uint256[](2);
+
+        address alice = 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4;
+        address bob = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2;
+
+        normalizedTos[0] = alice;
+        normalizedTos[1] = bob;
+
+        normalizedIds[0] = 1;
+        normalizedIds[1] = 2;
+
+        console.log("get address at index 0");
+
+        address add0 = token.testBalanceOfBatch2(normalizedTos, normalizedIds);
+
+        console.log("address at index 0:", add0);
+
+        console.log("normalizedTos[0]:", normalizedTos[0]);
+        assertEq(add0, bob);
+
+        uint256[] memory res = token.testBalanceOfBatch3(normalizedTos, normalizedIds);
+        console.log("hi passed3");
+        console.log(res.length);
+        // assertEq(res[0], 255);
+        // assertEq(res[1], 923);
+        // assertEq(res[2], 7273871);
+    }
+
     //     function testBatchMintToERC1155Recipient() public {
     //         ERC1155Recipient to = new ERC1155Recipient();
 

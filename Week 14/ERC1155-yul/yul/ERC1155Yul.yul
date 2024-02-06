@@ -44,6 +44,61 @@ object "ERC1155Yul" {
         returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
 
+      case 0x4e1273f4 /*"function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids) external view returns (uint256[] memory)"*/{
+        let accountsOffset := getOffsetAmount(0)
+        let idsOffset := getOffsetAmount(1)
+
+        // require len is same
+        let accountsLen := getArrayLen(0)
+        let idsLen := getArrayLen(1)
+
+
+      }
+
+      case 0x4de550c6 /*"function testBalanceOfBatch1(address[] calldata accounts, uint256[] calldata ids) external view returns (uint256)"*/{
+
+      }
+
+      case 0x00992038 /*"function testBalanceOfBatch2(address[] calldata accounts, uint256[] calldata ids) external view returns (address)"*/{
+
+        // require len and ids same
+        // but later on that
+        // return address at index-0 of accounts arr
+
+        let accountsOffset := getOffsetAmount(0)
+        let uintOfAddress := getUintElementInArrayByIndex(accountsOffset,1)
+        returnUint(uintOfAddress)
+        
+      }
+
+      case 0x6dbbf1cc/*"function testBalanceOfBatch3(address[] calldata accounts, uint256[] calldata ids) external view returns (uint256[] memory)"*/{
+        // returning array
+        // i need to store like a bunch of stuff in memory
+        // so I need to store the len first?
+        // then the word
+        // and i need to return the correct size
+
+        // so let's hardcode the memory
+        // i want a arr of 3 uint256s [255,923,7273871] , len 3
+        //lets try to add x60
+        
+        mstore(0,0)
+        mstore(0x20,0)
+        mstore(0x40,0)
+        // offset
+        mstore(0,60)
+        //len
+        mstore(0x80,3)
+        //255
+        mstore(0xA0,255)
+        //923
+        mstore(0xC0,923)
+        //7273871
+        mstore(0xE0,7273871)
+        return(0x80,0x80)
+        
+      }
+
       
       // default case to revert if unidentified selector found
       default {
@@ -134,11 +189,18 @@ object "ERC1155Yul" {
         s := div(calldataload(0), 0x100000000000000000000000000000000000000000000000000000000)
       }
 
-      function decodeAsAddress(offset) -> v {
-                v := decodeAsUint(offset)
-                if iszero(iszero(and(v, not(0xffffffffffffffffffffffffffffffffffffffff)))) {
+      function revertIfNotAddress(val) {
+        if iszero(iszero(and(val, not(0xffffffffffffffffffffffffffffffffffffffff)))) {
                     revert(0, 0)
                 }
+      }
+
+      function decodeAsAddress(offset) -> v {
+                v := decodeAsUint(offset)
+                // if iszero(iszero(and(v, not(0xffffffffffffffffffffffffffffffffffffffff)))) {
+                //     revert(0, 0)
+                // }
+                revertIfNotAddress(v)
             }
             function decodeAsUint(offset) -> v {
                 let pos := add(4, mul(offset, 0x20))
