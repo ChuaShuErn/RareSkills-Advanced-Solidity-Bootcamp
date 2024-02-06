@@ -13,18 +13,19 @@ object "ERC1155Yul" {
       require(iszero(callvalue()))
 
       //Dispatcher
-      //0x1270e0cc mint addr
+      //0x156e29f6 mint addr
       switch selector()
-      case 0x1270e0cc /* "mint(address,uint256,uint256)" */{
+      case 0x156e29f6 /* "function mint(address,uint256,uint256)" */{
         mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2))
         returnTrue()
       }
       
-      case 0x00fdd58e /* "balanceOf(address,uint256)" */{
+      case 0x00fdd58e /* "function balanceOf(address,uint256)" */{
         returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
       // default case to revert if unidentified selector found
       default {
+        
         revert(0,0)
       }
 
@@ -84,7 +85,7 @@ object "ERC1155Yul" {
 
       /* ---------- calldata decoding functions ----------- */
       function selector() -> s {
-        s := div(calldataload(0),0x100000000000000000000000000000000000000000000000000000000)
+        s := div(calldataload(0), 0x100000000000000000000000000000000000000000000000000000000)
       }
 
       function decodeAsAddress(offset) -> v {
