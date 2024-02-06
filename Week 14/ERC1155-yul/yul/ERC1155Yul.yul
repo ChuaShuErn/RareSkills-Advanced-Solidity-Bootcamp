@@ -19,10 +19,32 @@ object "ERC1155Yul" {
         mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2))
         returnTrue()
       }
+
+      case 0x0ca83480 /*"function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts)"*/{
+        
+        let to := decodeAsAddress(0)
+        let idsLen := getArrayLen(1)
+        let amountsLen := getArrayLen(2)
+        let idsOffsetAmount := getOffsetAmount(1)
+        let amountsOffsetAmount := getOffsetAmount(2)
+
+        // require idslen and amounts len are the same
+        require(eq(idsLen,amountsLen))
+
+        // for loop to batch mint
+        for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
+          let thisId := getUintElementInArrayByIndex(idsOffsetAmount,i)
+          let thisAmount := getUintElementInArrayByIndex(amountsOffsetAmount,i)
+          mint(to, thisId,thisAmount)
+        }
+       
+      }
       
       case 0x00fdd58e /* "function balanceOf(address,uint256)" */{
         returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
+
+      
       // default case to revert if unidentified selector found
       default {
         
@@ -38,8 +60,6 @@ object "ERC1155Yul" {
         // we need to get balance
         _mint(account,id,amount)
         
-
-
       }
 
       function balanceOf(account,id) -> val  {
@@ -83,6 +103,32 @@ object "ERC1155Yul" {
         if iszero(condition) { revert(0, 0) }
       }
 
+      function getOffsetAmount(offsetPos) -> offsetAmount{
+        let pos := add(4, mul(offsetPos, 0x20))
+         offsetAmount := add(4,calldataload(pos))
+      }
+      function getUintElementInArrayByIndex(offsetAmount, index) -> ele {
+        let indexAfterLen := add(index,1)
+        let skipBy := mul(indexAfterLen,0x20)
+    
+        // calldataload at offsetAmount  gives len
+        // calldataload at offsetAmount + 0x20 * 1 gives index 0
+        // calldataload at offsetAmount + 0x20 * 2 gives index 1
+        // calldataload at offsetAmount + (0x20 * n+1) gives index n
+
+        let eleOffsetAmount := add(skipBy,offsetAmount)
+        ele := calldataload(eleOffsetAmount)
+
+      }
+
+      function getArrayLen(offsetPos) -> len {
+        // let pos := add(4, mul(offsetPos, 0x20))
+        // let offsetAmount := add(4,calldataload(pos))
+        let offsetAmount := getOffsetAmount(offsetPos)
+        len := calldataload(offsetAmount)
+        
+      }
+
       /* ---------- calldata decoding functions ----------- */
       function selector() -> s {
         s := div(calldataload(0), 0x100000000000000000000000000000000000000000000000000000000)
@@ -101,6 +147,7 @@ object "ERC1155Yul" {
                 }
                 v := calldataload(pos)
             }
+     
 
       /* ---------- storage layout----------- */
       
