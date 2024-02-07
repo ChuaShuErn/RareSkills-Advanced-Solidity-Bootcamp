@@ -9,6 +9,7 @@ import {IERC1155} from "../test/utils/IERC1155.sol";
 import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
 import {DSTestPlus} from "solmate/test/utils/DSTestPlus.sol";
 
+
 /**
  * @dev From Solmate, modified slightly to test ERC1155 written in yul
  */
@@ -125,15 +126,23 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
 
     function testMintToEOA() public {
         console.log("test Mint to eoa entered");
-        token.mint(address(0xBEEF), 1337, 1);
-        token.mint(address(0xBEEF1), 1338, 2);
-        token.mint(address(0xBEEF2), 1339, 3);
+        token.mint(address(0xBEEF), 1337, 1,"");
+        token.mint(address(0xBEEF1), 1338, 2,"");
+        token.mint(address(0xBEEF2), 1339, 3,"");
         console.log("doing balanceOf");
         assertEq(token.balanceOf(address(0xBEEF), 1337), 1);
         assertEq(token.balanceOf(address(0xBEEF1), 1338), 2);
         assertEq(token.balanceOf(address(0xBEEF2), 1339), 3);
-        token.mint(address(0xBEEF), 1337, 100);
+        token.mint(address(0xBEEF), 1337, 100,"");
         assertEq(token.balanceOf(address(0xBEEF), 1337), 101);
+    }
+    //TODO: Remove this function once calldata implemented
+    function testFailTemporaryCallDataMint() public {
+
+        console.log("testTemporaryCallDataMint entered");
+
+        token.mint(address(0xBEEF),1337,1, "Hello World");
+
     }
 
     // function testMintToERC1155Recipient() public {
@@ -415,19 +424,13 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
             ids[3] = 1340;
             ids[4] = 1341;
 
-            // token.mint(address(0xBEEF), 1337, 100, "");
-            // token.mint(address(0xCAFE), 1338, 200, "");
-            // token.mint(address(0xFACE), 1339, 300, "");
-            // token.mint(address(0xDEAD), 1340, 400, "");
-            // token.mint(address(0xFEED), 1341, 500, "");
+            token.mint(address(0xBEEF), 1337, 100, "");
+            token.mint(address(0xCAFE), 1338, 200, "");
+            token.mint(address(0xFACE), 1339, 300, "");
+            token.mint(address(0xDEAD), 1340, 400, "");
+            token.mint(address(0xFEED), 1341, 500, "");
             
-            token.mint(address(0xBEEF), 1337, 100);
-            token.mint(address(0xCAFE), 1338, 200);
-            token.mint(address(0xFACE), 1339, 300);
-            token.mint(address(0xDEAD), 1340, 400);
-            token.mint(address(0xFEED), 1341, 500);
-
-
+        
             uint256[] memory balances = token.balanceOfBatch(tos, ids);
 
             assertEq(balances[0], 100);
@@ -437,9 +440,9 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
             assertEq(balances[4], 500);
         }
 
-    //     function testFailMintToZero() public {
-    //         token.mint(address(0), 1337, 1, "");
-    //     }
+        // function testFailMintToZero() public {
+        //     token.mint(address(0), 1337, 1, "");
+        // }
 
     //     function testFailMintToNonERC155Recipient() public {
     //         token.mint(address(new NonERC1155Recipient()), 1337, 1, "");

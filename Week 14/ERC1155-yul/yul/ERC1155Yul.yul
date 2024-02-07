@@ -22,6 +22,21 @@ object "ERC1155Yul" {
         returnTrue()
       }
 
+      case 0x731133e9 /*"function mint(address to, uint256 id, uint256 amount, bytes calldata)"*/{
+        //check if theres call data
+        let calldataPos := add(4, mul(0x04, 0x20))
+        let calldataSize := calldataload(calldataPos)
+        //if size is zero
+        if iszero(calldataSize){
+          mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2))
+          returnTrue()
+        }
+        //FOr now revert if there is calldata
+        revert(0,0)
+
+        // check if to is a ERC1155 Receiver
+      }
+
       case 0x0ca83480 /*"function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts)"*/{
         
         let to := decodeAsAddress(0)
