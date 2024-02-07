@@ -1,11 +1,11 @@
 Done in remix
 
-/\* batchmint
+batchmint
 
 - to: 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
 - ids: [1,2,3,4,5]
 - amounts [10,20,30,40,50]
-  \*/
+
 
 // calldata:  
 0x0ca83480 - func sig
@@ -25,13 +25,11 @@ Done in remix
 0000000000000000000000000000000000000000000000000000000000000028 - index 3 of amounts[] -> 40
 0000000000000000000000000000000000000000000000000000000000000032 - index 4 of amounts[] -> 50
 
-2.  /\* batchmint
+2. batchmint
 
 - to: 0x5c6B0f7Bf3E7ce046039Bd8FABdfD3f9F5021678
 - ids: [1,2,3,4]
 - amounts [10,20,30,40]
-  \*/
-
 // calldata:
 0x0ca83480
 0000000000000000000000005c6b0f7bf3e7ce046039bd8fabdfd3f9f5021678
