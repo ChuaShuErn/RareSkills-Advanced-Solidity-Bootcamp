@@ -2,6 +2,7 @@ object "ERC1155Yul" {
   code {
     // store the creator in slot zero.
     sstore(0,caller())
+    
 
     // Deploy the contract
     datacopy(0, dataoffset("Runtime"), datasize("Runtime"))
@@ -11,6 +12,7 @@ object "ERC1155Yul" {
     code {
       // Protection against sending Ether
       require(iszero(callvalue()))
+      initMemoryPointer()
 
       //Dispatcher
       //0x156e29f6 mint addr
@@ -30,6 +32,7 @@ object "ERC1155Yul" {
 
         // require idslen and amounts len are the same
         require(eq(idsLen,amountsLen))
+      
 
         // for loop to batch mint
         for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
@@ -47,55 +50,12 @@ object "ERC1155Yul" {
       case 0x4e1273f4 /*"function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids) external view returns (uint256[] memory)"*/{
         let accountsOffset := getOffsetAmount(0)
         let idsOffset := getOffsetAmount(1)
-
         // require len is same
         let accountsLen := getArrayLen(0)
         let idsLen := getArrayLen(1)
-
-
-      }
-
-      case 0x4de550c6 /*"function testBalanceOfBatch1(address[] calldata accounts, uint256[] calldata ids) external view returns (uint256)"*/{
-
-      }
-
-      case 0x00992038 /*"function testBalanceOfBatch2(address[] calldata accounts, uint256[] calldata ids) external view returns (address)"*/{
-
-        // require len and ids same
-        // but later on that
-        // return address at index-0 of accounts arr
-
-        let accountsOffset := getOffsetAmount(0)
-        let uintOfAddress := getUintElementInArrayByIndex(accountsOffset,1)
-        returnUint(uintOfAddress)
         
-      }
-
-      case 0x6dbbf1cc/*"function testBalanceOfBatch3(address[] calldata accounts, uint256[] calldata ids) external view returns (uint256[] memory)"*/{
-        // returning array
-        // i need to store like a bunch of stuff in memory
-        // so I need to store the len first?
-        // then the word
-        // and i need to return the correct size
-
-        // so let's hardcode the memory
-        // i want a arr of 3 uint256s [255,923,7273871] , len 3
-        //lets try to add x60
-        
-        mstore(0,0)
-        mstore(0x20,0)
-        mstore(0x40,0)
-        // offset
-        mstore(0,60)
-        //len
-        mstore(0x80,3)
-        //255
-        mstore(0xA0,255)
-        //923
-        mstore(0xC0,923)
-        //7273871
-        mstore(0xE0,7273871)
-        return(0x80,0x80)
+        require(eq(accountsLen,idsLen))
+        balanceOfBatch(accountsOffset,idsOffset,accountsLen,idsLen)
         
       }
 
@@ -120,6 +80,34 @@ object "ERC1155Yul" {
       function balanceOf(account,id) -> val  {
         let innerKey := getBalanceInnerMappingKey(account,id)
          val := sload(innerKey)
+      }
+
+      function balanceOfBatch(accountsOffset,idsOffset,accountsLen,idsLen) {
+          //prepare pointer
+          let start := getMemoryPointer()
+          //prepare offset
+          mstore(getMemoryPointer(),0x20)
+          // move pointer by 1 word
+          incrMemoryPointer()
+          //prepare len
+          mstore(getMemoryPointer(),idsLen)
+          // incrMemoryPointer
+          incrMemoryPointer()
+          //size is idsLen * 0x20 + 0x40
+          let size := safeAdd(0x40,mul(idsLen,0x20))
+          for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
+          let thisAccount := getUintElementInArrayByIndex(accountsOffset,i)
+          // revert if not valid address 
+          revertIfNotAddress(thisAccount)
+          let thisId := getUintElementInArrayByIndex(idsOffset,i)
+          // get bal
+          let bal := balanceOf(thisAccount,thisId)
+          mstore(getMemoryPointer(),bal)
+          incrMemoryPointer()
+        }
+        
+        return (start,size)
+        
       }
 
 
@@ -253,11 +241,52 @@ object "ERC1155Yul" {
           innerKey := keccak256(0,0x40)
       }
 
+      /* ---------- memory ----------- */
+      //https://docs.soliditylang.org/en/latest/internals/layout_in_memory.html
+      // 0x00 - 0x3f (64 bytes): scratch space for hashing methods
+      //0x40 - 0x5f (32 bytes): currently allocated memory size (aka. free memory pointer)
+      // 0x60 - 0x7f (32 bytes): zero slot
+      
+
+      //the free memory pointer is allocated at 0x40 and
+      function memoryPointerPos() -> p {
+        p := 0x40
+      }
+      //the free memory pointer points to 0x80 initially
+      function initMemoryPointer() {
+        mstore(memoryPointerPos(),0x80)
+      }
+
+      //we need a getter function for memoryPointer
+      function getMemoryPointer()-> memPointer {
+        memPointer := mload(memoryPointerPos())
+      }
+
+      //we need a setter function for memoryPointer
+      function setMemoryPointer(val) {
+        mstore(memoryPointerPos(), val)
+      }
+
+      //simple 1 word incr for memoryPointer
+      function incrMemoryPointer() {
+        mstore(memoryPointerPos(), safeAdd(0x20,getMemoryPointer()))
+      }
+
+      
+
+      //essentially, when we want to store stuff in memroy
+      // we need to know what is the next offset (kept in track via memory pointer)
+
+
+
+
+
+
+
       
 
     }
   }
 }
 
-// time do mint to eoa
 
