@@ -18,22 +18,58 @@ object "ERC1155Yul" {
       //0x156e29f6 mint addr
       switch selector()
       case 0x156e29f6 /* "function mint(address,uint256,uint256)" */{
-        mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2))
-        returnTrue()
+        // TODO: put in bytes extra data
+        // Let's check if 0x00 serves its purpose as 0 bytes extradata
+        // mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2), 0x00 )
+        // returnTrue()
+
+      
+
       }
 
       case 0x731133e9 /*"function mint(address to, uint256 id, uint256 amount, bytes calldata)"*/{
         //check if theres call data
-        let calldataPos := add(4, mul(0x04, 0x20))
-        let calldataSize := calldataload(calldataPos)
-        //if size is zero
-        if iszero(calldataSize){
-          mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2))
-          returnTrue()
-        }
-        //FOr now revert if there is calldata
-        revert(0,0)
 
+        // TODO: 
+        // Ok minting is essentially a safeTransferFrom from address 0
+        // So what is the flow
+        // 1) revert if `address to` is 0
+        // decodeAsAddress already does that
+        // let decodedTo := decodeAsAddress(0)
+        // require(not(decodedTo,0))
+        // _update (calldata data is not used here)
+        // 
+        // 2) update balances in mapping
+        // 3) Emit either Transfer Single or Transfer Batch
+        // _updateWithAcceptanceCheck
+        // 4) check if its EOA or Contract
+        // if EOA, continue
+        // if Contract, check if onERC1155Received (calldata data is used here)
+
+        // THIS CHECKS for calldata
+        // get offset
+        // 0x00: Function selector (first 4 bytes of the keccak256 hash of the function signature)
+        // 0x04: Address `to` (20 bytes, right-padded with zeroes to fill 32 bytes)
+        // 0x24: uint256 `id` (32 bytes)
+        // 0x44: uint256 `value` (32 bytes)
+        // 0x64: Offset to the start of `data` (32 bytes, this is relative to the start of the calldata)
+        // 0x84: Length of `data` (32 bytes, specifies the number of bytes in the `data` byte array)
+        // 0xa4: Actual bytes of `data` (variable length, right-padded with zeroes to fill a multiple of 32 bytes)
+  
+        let calldataOffsetPos := add(4,mul(0x03,0x20))
+        let calldataOffset := calldataload(calldataOffsetPos)
+        let calldataLen := calldataload(add(4,calldataOffset))
+        let calldataContent := 0x00
+        // can we just prepare calldata as 0
+
+        // if gt(calldatalen,0) {
+        //   // modify calldataContent
+        // }
+        // do _mint...
+        // _mint()
+        _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2), calldataContent)
+       
+      
         // check if to is a ERC1155 Receiver
       }
 
@@ -53,7 +89,7 @@ object "ERC1155Yul" {
         for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
           let thisId := getUintElementInArrayByIndex(idsOffsetAmount,i)
           let thisAmount := getUintElementInArrayByIndex(amountsOffsetAmount,i)
-          mint(to, thisId,thisAmount)
+         // mint(to, thisId,thisAmount)
         }
        
       }
@@ -85,12 +121,12 @@ object "ERC1155Yul" {
     // A account is a hash from someone's public key.
 
       // external functions
-      function mint(account,id,amount){
-        //require(calledByOwner())
-        // we need to get balance
-        _mint(account,id,amount)
+      // function mint(account,id,amount, extraData){
+      //   //require(calledByOwner())
+      //   // we need to get balance
+      //   _mint(account,id,amount,extraData)
         
-      }
+      // }
 
       function balanceOf(account,id) -> val  {
         let innerKey := getBalanceInnerMappingKey(account,id)
@@ -127,15 +163,101 @@ object "ERC1155Yul" {
 
 
       //internal functions
-      function _mint(account,id,amount){
-        // find mapping
-        //let currentBalance := balanceOf(account,id)
-        let currentBalance := balanceOf(account,id)
-        let newAmount := safeAdd(amount,currentBalance)
-        // store newAmount to account mapping for this id
-        let innerKey := getBalanceInnerMappingKey(account,id)
-        sstore(innerKey,newAmount)
+      /*
+       * @dev 
+       * account address
+       * id address
+       * amount uint256
+       * extraData bytes calldata
+      */
+      function _mint(account,id,amount, extraData){
+        // mint batch would not use _mint
+        // from is address 0
+        let from := 0x00
+
+        // TODO: convert id and amount to SingleTon Array so _update can process it
+        // Strategy I will copy the data from calldata into memory
+        // I will keep track of the pointer by storing the offset
+        // so the memory layout  
+        // 1 -> amount offset 
+        // 2 -> id offset
+        // 3 -> len amount
+        // 4 -> val amount
+        // 5 -> len id
+        // 6 -> val id
+       
+
+        /*
+         * Maing Singleton array in memory
+         */
+        // pointer -> 0x80
+        let idOffset := safeAdd(getMemoryPointer(),0x40)
+        // from 0x80, we need to move 2 words, past idsOffset, and Amount offset
+        // so we add 0x40 (64 bytes)
+        mstore(getMemoryPointer(),idOffset) //  id offset 
+        incrMemoryPointer()
+        // pointer -> 0xA0
+        let amountOffset := safeAdd(getMemoryPointer(),0x60)
+        // from 0x80, we need to move 4 words, past idOffset, amountOffset,idLen, idVal
+        // since we already incremented 1 word via incrMemoryPointer,
+        // which would result in getMemoryPointer() returning 0xA0
+        // we will move 3 more words, so 0x60 (96 bytes)
+        mstore(getMemoryPointer(), amountOffset) //  amount offset 
+        incrMemoryPointer()
+        // pointer -> 0xC0
+        mstore(getMemoryPointer(),1) // len of id is 
+        incrMemoryPointer()
+        // pointer -> 0xE0
+        mstore(getMemoryPointer(),id) // the only element of id is id
+        incrMemoryPointer()
+        // pointer ->0x100
+        mstore(getMemoryPointer(), 1) // len of amount is 1
+        incrMemoryPointer()
+        // pointer -> 0x120
+        mstore(getMemoryPointer(), amount) // the only element of amount is amount
+        incrMemoryPointer()
+        // pointer -> 0x140
+        _update(from,account,idOffset,amountOffset)
+
+        // // find mapping
+        // let currentBalance := balanceOf(account,id)
+        // let currentBalance := balanceOf(account,id)
+        // let newAmount := safeAdd(amount,currentBalance)
+        // // store newAmount to account mapping for this id
+        // let innerKey := getBalanceInnerMappingKey(account,id)
+        // sstore(innerKey,newAmount)
         
+      }
+
+      /*
+       * @dev
+       * from address
+       * to address
+       * ids address[] memory (offset)
+       * values uint256[] memory (offset)
+       * purpose: update state for mint, burn, transfer
+      */
+      function _update(from,to,ids,amounts) {
+
+        let operator := caller() 
+        //return (ids,0x20) will return the len
+        let idsLen := mload(ids) // 1
+        let idsValue := mload(safeAdd(ids,0x20))
+        // amounts Len // 2
+        // amountslen gives me ID
+        let amountsLen := mload(amounts)
+        let amountsEle := mload(safeAdd(amounts,0x20))
+
+
+        // do a forloop to updateBalances
+        // inside for loop if from is 0 , its mint, dont upodate bal
+        // if to is 0, its burn, dont update address 0 bal
+         for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
+         
+        }
+        
+       
+
       }
 
       /* ---------- calldata encoding functions ---------- */
