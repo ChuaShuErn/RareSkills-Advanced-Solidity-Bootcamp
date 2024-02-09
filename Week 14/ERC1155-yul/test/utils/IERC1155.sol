@@ -120,7 +120,7 @@ interface IERC1155 is IERC165 {
 
     // Additional Functions
     function mint(address to, uint256 id, uint256 amount) external;
-    function mint(address to, uint256 id, uint256 amount, bytes calldata) external returns (address);
+    function mint(address to, uint256 id, uint256 amount, bytes calldata) external returns (uint256);
 
     function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts) external;
     function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts, bytes calldata) external;

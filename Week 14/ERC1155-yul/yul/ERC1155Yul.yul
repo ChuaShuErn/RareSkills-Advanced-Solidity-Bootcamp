@@ -253,6 +253,29 @@ object "ERC1155Yul" {
         // inside for loop if from is 0 , its mint, dont upodate bal
         // if to is 0, its burn, dont update address 0 bal
          for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
+
+            let thisId := getEleFromMemoryArrayByIndex(ids,i)
+            let thisAmount := getEleFromMemoryArrayByIndex(amounts,i)
+            mstore(0,thisAmount)
+            return (0x00,0x20)
+
+          // if from is not zero, update address
+          if iszero(iszero(from)) {
+            // get balances for from
+            let currentFromBalance := balanceOf(from,thisId)
+            // revert if currentFromBalance lt than thisAmount
+            
+
+             // // find mapping
+        // let currentBalance := balanceOf(account,id)
+        // let currentBalance := balanceOf(account,id)
+        // let newAmount := safeAdd(amount,currentBalance)
+        // // store newAmount to account mapping for this id
+        // let innerKey := getBalanceInnerMappingKey(account,id)
+        // sstore(innerKey,newAmount)
+            
+          }
+
          
         }
         
@@ -278,6 +301,10 @@ object "ERC1155Yul" {
         val := add(a,b)
         if or(lt(val,a), lt(val,b)) {revert(0,0)}
       }
+      function safeSub(a,b) -> {
+        val := sub(a,b)
+        
+      }
 
       function require(condition) {
         if iszero(condition) { revert(0, 0) }
@@ -287,6 +314,18 @@ object "ERC1155Yul" {
         let pos := add(4, mul(offsetPos, 0x20))
          offsetAmount := add(4,calldataload(pos))
       }
+
+      function getEleFromMemoryArrayByIndex(offset, index) -> ele {
+        // if index is 0, skip by 1 * 32 bytes
+        // if index is 1, skip by 2 * 32 bytes
+        // if index is n, skipBy n+1 * 32 bytes
+        let indexAfterLen := add(index,1)
+        let skipBy := mul(indexAfterLen,0x20)
+
+        let eleOffsetAtIndex := add(skipBy,offset)
+        ele := mload(eleOffsetAtIndex)
+      }
+      //calldata version
       function getUintElementInArrayByIndex(offsetAmount, index) -> ele {
         let indexAfterLen := add(index,1)
         let skipBy := mul(indexAfterLen,0x20)

@@ -123,10 +123,10 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
      */
 
     function testIfBytesReturnedIsCorrect() public {
-        address idLen =
+        uint256 firstELe =
             token.mint(address(0xBEEF), 69, 696969, "Hello World This Is My String that will take over the world");
         console.log("Test here:");
-        console.log(idLen);
+        console.log(firstELe);
     }
 
     /**
