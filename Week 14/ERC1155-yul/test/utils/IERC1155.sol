@@ -21,11 +21,7 @@ interface IERC1155 is IERC165 {
      * transfers.
      */
     event TransferBatch(
-        address indexed operator,
-        address indexed from,
-        address indexed to,
-        uint256[] ids,
-        uint256[] values
+        address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values
     );
 
     /**
@@ -55,10 +51,10 @@ interface IERC1155 is IERC165 {
      *
      * - `accounts` and `ids` must have the same length.
      */
-    function balanceOfBatch(
-        address[] calldata accounts,
-        uint256[] calldata ids
-    ) external view returns (uint256[] memory);
+    function balanceOfBatch(address[] calldata accounts, uint256[] calldata ids)
+        external
+        view
+        returns (uint256[] memory);
 
     /**
      * @dev Grants or revokes permission to `operator` to transfer the caller's tokens, according to `approved`,
@@ -125,18 +121,21 @@ interface IERC1155 is IERC165 {
     // Additional Functions
     function mint(address to, uint256 id, uint256 amount) external;
     function mint(address to, uint256 id, uint256 amount, bytes calldata) external;
-    
+
     function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts) external;
     function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts, bytes calldata) external;
 
     function burn(address to, uint256 id, uint256 amount) external;
     function burn(address to, uint256 id, uint256 amount, bytes calldata) external;
 
-     function batchBurn(
-        address from,
-        uint256[] memory ids,
-        uint256[] memory amounts
-    ) external;
+    function batchBurn(address from, uint256[] calldata ids, uint256[] calldata amounts) external;
 
-
+    //Test
+    // function testBatchMint(address to, uint256[] calldata id, uint256[] calldata amounts) external returns (uint256);
+    // function testBalanceOfBatch1(address[] calldata accounts, uint256[] calldata ids) external view returns (uint256);
+    // function testBalanceOfBatch2(address[] calldata accounts, uint256[] calldata ids) external view returns (address);
+    // function testBalanceOfBatch3(address[] calldata accounts, uint256[] calldata ids)
+    //     external
+    //     view
+    //     returns (uint256[] memory);
 }
