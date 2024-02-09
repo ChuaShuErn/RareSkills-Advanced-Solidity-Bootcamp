@@ -123,10 +123,10 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
      */
 
     function testIfBytesReturnedIsCorrect() public {
-        uint256 firstELe =
-            token.mint(address(0xBEEF), 69, 696969, "Hello World This Is My String that will take over the world");
+        
+        token.mint(address(0xBEEF), 69, 696969, "Hello World This Is My String that will take over the world");
         console.log("Test here:");
-        console.log(firstELe);
+        
     }
 
     /**
@@ -136,18 +136,18 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
     //function balanceOf(address account, uint256 id) external view returns (uint256);
     // function mint(address to, uint256 id, uint256 amount) external;
     // TODO: uncomment this
-    // function testMintToEOA() public {
-    //     console.log("test Mint to eoa entered");
-    //     token.mint(address(0xBEEF), 1337, 1,"");
-    //     token.mint(address(0xBEEF1), 1338, 2,"");
-    //     token.mint(address(0xBEEF2), 1339, 3,"");
-    //     console.log("doing balanceOf");
-    //     assertEq(token.balanceOf(address(0xBEEF), 1337), 1);
-    //     assertEq(token.balanceOf(address(0xBEEF1), 1338), 2);
-    //     assertEq(token.balanceOf(address(0xBEEF2), 1339), 3);
-    //     token.mint(address(0xBEEF), 1337, 100,"");
-    //     assertEq(token.balanceOf(address(0xBEEF), 1337), 101);
-    // }
+    function testMintToEOA() public {
+        console.log("test Mint to eoa entered");
+        token.mint(address(0xBEEF), 1337, 1,"");
+        token.mint(address(0xBEEF1), 1338, 2,"");
+        token.mint(address(0xBEEF2), 1339, 3,"");
+        console.log("doing balanceOf");
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 1);
+        assertEq(token.balanceOf(address(0xBEEF1), 1338), 2);
+        assertEq(token.balanceOf(address(0xBEEF2), 1339), 3);
+        token.mint(address(0xBEEF), 1337, 100,"");
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 101);
+    }
     // //TODO: Remove this function once calldata implemented
     // function testFailTemporaryCallDataMint() public {
 

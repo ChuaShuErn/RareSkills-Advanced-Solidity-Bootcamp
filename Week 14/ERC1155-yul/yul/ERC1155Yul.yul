@@ -256,13 +256,12 @@ object "ERC1155Yul" {
 
             let thisId := getEleFromMemoryArrayByIndex(ids,i)
             let thisAmount := getEleFromMemoryArrayByIndex(amounts,i)
-            mstore(0,thisAmount)
-            return (0x00,0x20)
+           
 
           // if from is not zero, update address
           if iszero(iszero(from)) {
             // get balances for from
-            let currentFromBalance := balanceOf(from,thisId)
+            
             // revert if currentFromBalance lt than thisAmount
             
 
@@ -274,6 +273,12 @@ object "ERC1155Yul" {
         // let innerKey := getBalanceInnerMappingKey(account,id)
         // sstore(innerKey,newAmount)
             
+          }
+          
+          // if to is not zero, update bal for to
+          // to always adds
+          if iszero(iszero(to)){
+            safeAddToBalance(to,thisId, thisAmount)
           }
 
          
@@ -301,11 +306,7 @@ object "ERC1155Yul" {
         val := add(a,b)
         if or(lt(val,a), lt(val,b)) {revert(0,0)}
       }
-      function safeSub(a,b) -> {
-        val := sub(a,b)
-        
-      }
-
+   
       function require(condition) {
         if iszero(condition) { revert(0, 0) }
       }
@@ -415,6 +416,17 @@ object "ERC1155Yul" {
           mstore(0,account)
           mstore(0x20,outerKey )
           innerKey := keccak256(0,0x40)
+      }
+
+      function safeAddToBalance(account, id, amount) {
+          let innerKey := getBalanceInnerMappingKey(account,id)
+          let currentBal := sload(innerKey)
+          let newBal := safeAdd(currentBal,amount)
+          sstore(innerKey,newBal)
+      }
+
+      function safeSubtractFromBalance(account,id,amount){
+
       }
 
       /* ---------- memory ----------- */
