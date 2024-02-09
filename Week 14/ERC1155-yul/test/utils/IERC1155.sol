@@ -128,14 +128,14 @@ interface IERC1155 is IERC165 {
     function burn(address to, uint256 id, uint256 amount) external;
     function burn(address to, uint256 id, uint256 amount, bytes calldata) external;
 
-    function batchBurn(address from, uint256[] memory ids, uint256[] memory amounts) external;
+    function batchBurn(address from, uint256[] calldata ids, uint256[] calldata amounts) external;
 
     //Test
-    function testBatchMint(address to, uint256[] calldata id, uint256[] calldata amounts) external returns (uint256);
-    function testBalanceOfBatch1(address[] calldata accounts, uint256[] calldata ids) external view returns (uint256);
-    function testBalanceOfBatch2(address[] calldata accounts, uint256[] calldata ids) external view returns (address);
-    function testBalanceOfBatch3(address[] calldata accounts, uint256[] calldata ids)
-        external
-        view
-        returns (uint256[] memory);
+    // function testBatchMint(address to, uint256[] calldata id, uint256[] calldata amounts) external returns (uint256);
+    // function testBalanceOfBatch1(address[] calldata accounts, uint256[] calldata ids) external view returns (uint256);
+    // function testBalanceOfBatch2(address[] calldata accounts, uint256[] calldata ids) external view returns (address);
+    // function testBalanceOfBatch3(address[] calldata accounts, uint256[] calldata ids)
+    //     external
+    //     view
+    //     returns (uint256[] memory);
 }

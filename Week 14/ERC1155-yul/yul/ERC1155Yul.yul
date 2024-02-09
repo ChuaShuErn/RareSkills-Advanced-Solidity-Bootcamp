@@ -22,6 +22,7 @@ object "ERC1155Yul" {
         // Let's check if 0x00 serves its purpose as 0 bytes extradata
         // mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2), 0x00 )
         // returnTrue()
+        _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2),0x00)
 
       
 
@@ -72,9 +73,9 @@ object "ERC1155Yul" {
       
         // check if to is a ERC1155 Receiver
       }
-
+      //0x0ca83480 -> this one with calldata
+      //
       case 0x0ca83480 /*"function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts)"*/{
-        
         let to := decodeAsAddress(0)
         let idsLen := getArrayLen(1)
         let amountsLen := getArrayLen(2)
@@ -83,14 +84,28 @@ object "ERC1155Yul" {
 
         // require idslen and amounts len are the same
         require(eq(idsLen,amountsLen))
-      
+        
+        
+        _batchMint(to,idsLen,idsOffsetAmount,amountsOffsetAmount, 0x00 )
+      }
+      case 0xb48ab8b6 /*"function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts, bytes calldata data)"*/{
+        
+        // address cannot be 0
+        let to := decodeAsAddress(0)
+        let idsLen := getArrayLen(1)
+        let amountsLen := getArrayLen(2)
+        let idsOffsetAmount := getOffsetAmount(1)
+        let amountsOffsetAmount := getOffsetAmount(2)
 
-        // for loop to batch mint
-        for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
-          let thisId := getUintElementInArrayByIndex(idsOffsetAmount,i)
-          let thisAmount := getUintElementInArrayByIndex(amountsOffsetAmount,i)
-         // mint(to, thisId,thisAmount)
-        }
+        // require idslen and amounts len are the same
+        require(eq(idsLen,amountsLen))
+        
+        //TODO: handle calldaata
+        _batchMint(to,idsLen,idsOffsetAmount,amountsOffsetAmount, 0x00 )
+
+       
+
+       
        
       }
       
@@ -147,10 +162,10 @@ object "ERC1155Yul" {
           //size is idsLen * 0x20 + 0x40
           let size := safeAdd(0x40,mul(idsLen,0x20))
           for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
-          let thisAccount := getUintElementInArrayByIndex(accountsOffset,i)
+          let thisAccount := getUintElementInCalldataArrayByIndex(accountsOffset,i)
           // revert if not valid address 
           revertIfNotAddress(thisAccount)
-          let thisId := getUintElementInArrayByIndex(idsOffset,i)
+          let thisId := getUintElementInCalldataArrayByIndex(idsOffset,i)
           // get bal
           let bal := balanceOf(thisAccount,thisId)
           mstore(getMemoryPointer(),bal)
@@ -191,33 +206,38 @@ object "ERC1155Yul" {
          * Maing Singleton array in memory
          */
         // pointer -> 0x80
-        let idOffset := safeAdd(getMemoryPointer(),0x40)
-        // from 0x80, we need to move 2 words, past idsOffset, and Amount offset
-        // so we add 0x40 (64 bytes)
-        mstore(getMemoryPointer(),idOffset) //  id offset 
-        incrMemoryPointer()
-        // pointer -> 0xA0
-        let amountOffset := safeAdd(getMemoryPointer(),0x60)
-        // from 0x80, we need to move 4 words, past idOffset, amountOffset,idLen, idVal
-        // since we already incremented 1 word via incrMemoryPointer,
-        // which would result in getMemoryPointer() returning 0xA0
-        // we will move 3 more words, so 0x60 (96 bytes)
-        mstore(getMemoryPointer(), amountOffset) //  amount offset 
-        incrMemoryPointer()
-        // pointer -> 0xC0
-        mstore(getMemoryPointer(),1) // len of id is 
-        incrMemoryPointer()
-        // pointer -> 0xE0
-        mstore(getMemoryPointer(),id) // the only element of id is id
-        incrMemoryPointer()
-        // pointer ->0x100
-        mstore(getMemoryPointer(), 1) // len of amount is 1
-        incrMemoryPointer()
-        // pointer -> 0x120
-        mstore(getMemoryPointer(), amount) // the only element of amount is amount
-        incrMemoryPointer()
+        let idsMemStart := getMemoryPointer()
+        makeSingletonArrayInMemory(id)
+        let amountsMemStart := getMemoryPointer()
+        makeSingletonArrayInMemory(amount)
+        
+        // let idOffset := safeAdd(getMemoryPointer(),0x40)
+        // // from 0x80, we need to move 2 words, past idsOffset, and Amount offset
+        // // so we add 0x40 (64 bytes)
+        // mstore(getMemoryPointer(),idOffset) //  id offset 
+        // incrMemoryPointer()
+        // // pointer -> 0xA0
+        // let amountOffset := safeAdd(getMemoryPointer(),0x60)
+        // // from 0x80, we need to move 4 words, past idOffset, amountOffset,idLen, idVal
+        // // since we already incremented 1 word via incrMemoryPointer,
+        // // which would result in getMemoryPointer() returning 0xA0
+        // // we will move 3 more words, so 0x60 (96 bytes)
+        // mstore(getMemoryPointer(), amountOffset) //  amount offset 
+        // incrMemoryPointer()
+        // // pointer -> 0xC0
+        // mstore(getMemoryPointer(),1) // len of id is 
+        // incrMemoryPointer()
+        // // pointer -> 0xE0
+        // mstore(getMemoryPointer(),id) // the only element of id is id
+        // incrMemoryPointer()
+        // // pointer ->0x100
+        // mstore(getMemoryPointer(), 1) // len of amount is 1
+        // incrMemoryPointer()
+        // // pointer -> 0x120
+        // mstore(getMemoryPointer(), amount) // the only element of amount is amount
+        // incrMemoryPointer()
         // pointer -> 0x140
-        _update(from,account,idOffset,amountOffset)
+        _update(from,account,idsMemStart ,amountsMemStart)
 
         // // find mapping
         // let currentBalance := balanceOf(account,id)
@@ -228,13 +248,52 @@ object "ERC1155Yul" {
         // sstore(innerKey,newAmount)
         
       }
+        /*
+       * @dev 
+       * to address 
+       * idsLen length of id array
+       * ids address[] calldata Offset
+       * amounts uint256[] calldata Offset
+       * extraData bytes calldata
+      */
+      function _batchMint(to,idsLen,ids,amounts,extraData) {
+        let from := 0x00
+        //  copy id array into memory
+        // try calldatacopy
+        // destOffset: byte offset in the memory where the result will be copied.
+        // offset: byte offset in the calldata to copy.
+        // size: byte size to copy.
+        // i could copy everything
+        // but i have to use address in the memory
+        // OR
+        // I could only copy from offsetIds, and all the way
+        // then sub tract each offset by 0x20 because we are not including address
+        // we will do this method
+         // let's try to return the ids arr
+        // prepare ids offset
+        let idsStart := getMemoryPointer()
+        mstore(getMemoryPointer(),0x20)
+         incrMemoryPointer()
+         copyCalldataArrayIntoMemory(ids)
+        
+        // prepare amounts offset
+        let amountsStart := getMemoryPointer()
+        mstore(getMemoryPointer(), 0x20)
+        incrMemoryPointer()
+        copyCalldataArrayIntoMemory(amounts)
+        
+        _update(from, to, idsStart,amountsStart)
+
+    
+       
+      }
 
       /*
        * @dev
        * from address
        * to address
-       * ids address[] memory (offset)
-       * values uint256[] memory (offset)
+       * ids address[] memory (start-> pointing at len)
+       * values uint256[] memory (start -> pointing at len)
        * purpose: update state for mint, burn, transfer
       */
       function _update(from,to,ids,amounts) {
@@ -327,7 +386,7 @@ object "ERC1155Yul" {
         ele := mload(eleOffsetAtIndex)
       }
       //calldata version
-      function getUintElementInArrayByIndex(offsetAmount, index) -> ele {
+      function getUintElementInCalldataArrayByIndex(offsetAmount, index) -> ele {
         let indexAfterLen := add(index,1)
         let skipBy := mul(indexAfterLen,0x20)
     
@@ -459,7 +518,40 @@ object "ERC1155Yul" {
       function incrMemoryPointer() {
         mstore(memoryPointerPos(), safeAdd(0x20,getMemoryPointer()))
       }
+      /* ---------- memory management ----------- */
+      
+      // stores len+eles from calldata into memory
+      // moves the free memory pointer to the next free slot
+      function copyCalldataArrayIntoMemory(calldataArrayOffset){
+          
+          let memStart := getMemoryPointer()
+       
+          let arrayLen := calldataload(calldataArrayOffset)
+          // if len is 1 , size to copy is 0x20 + 0x20 * 1
+          // if len is 2, size to copy is 0x20 + 0x20 * 2
+          // if len is n, size to copy is 0x20 + 0x20 * n
+          let sizeToCopy := safeAdd(0x20,mul(0x20,arrayLen))
+          //calldatacopy
+          //destOffset: byte offset in the memory where the result will be copied.
+          //offset: byte offset in the calldata to copy.
+          //size: byte size to copy.
+          
+          calldatacopy(memStart,calldataArrayOffset, sizeToCopy)
+          // move pointer by 1 byte (len) + n eles (n*32 bytes)
+          setMemoryPointer(safeAdd(getMemoryPointer(),sizeToCopy))
 
+      }
+
+      // stores length of 1 and val from a single val into memory
+      // moves pointer
+      // returns start of array (len)
+      function makeSingletonArrayInMemory(val) {
+          let arrayStart := getMemoryPointer()
+          mstore(arrayStart,0x01) // len of 1
+          incrMemoryPointer()
+          mstore(getMemoryPointer(), val)
+          incrMemoryPointer()
+      }
       
 
       //essentially, when we want to store stuff in memroy
