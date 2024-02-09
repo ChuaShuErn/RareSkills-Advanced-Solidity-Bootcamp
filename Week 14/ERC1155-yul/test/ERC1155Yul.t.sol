@@ -117,6 +117,7 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
         YulDeployer yulDeployer = new YulDeployer();
         address yulAddress = yulDeployer.deployContract("ERC1155Yul");
         token = IERC1155(yulAddress);
+        console.log("passed");
     }
     /*
      * This is a temporary test zone
@@ -179,12 +180,6 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
     }
     // //TODO: Remove this function once calldata implemented
     // function testFailTemporaryCallDataMint() public {
-
-    //     console.log("testTemporaryCallDataMint entered");
-
-    //     token.mint(address(0xBEEF),1337,1, "Hello World");
-
-    // }
 
     // function testMintToERC1155Recipient() public {
     //     ERC1155Recipient to = new ERC1155Recipient();

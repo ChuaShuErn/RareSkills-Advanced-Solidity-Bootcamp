@@ -557,14 +557,6 @@ object "ERC1155Yul" {
       //essentially, when we want to store stuff in memroy
       // we need to know what is the next offset (kept in track via memory pointer)
 
-
-
-
-
-
-
-      
-
     }
   }
 }
