@@ -22,7 +22,7 @@ object "ERC1155Yul" {
         // Let's check if 0x00 serves its purpose as 0 bytes extradata
         // mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2), 0x00 )
         // returnTrue()
-        _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2),0x00)
+        _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2))
 
       
 
@@ -57,10 +57,10 @@ object "ERC1155Yul" {
         // 0x84: Length of `data` (32 bytes, specifies the number of bytes in the `data` byte array)
         // 0xa4: Actual bytes of `data` (variable length, right-padded with zeroes to fill a multiple of 32 bytes)
   
-        let calldataOffsetPos := add(4,mul(0x03,0x20))
-        let calldataOffset := calldataload(calldataOffsetPos)
-        let calldataLen := calldataload(add(4,calldataOffset))
-        let calldataContent := 0x00
+        // let calldataOffsetPos := add(4,mul(0x03,0x20))
+        // let calldataOffset := calldataload(calldataOffsetPos)
+        // let calldataLen := calldataload(add(4,calldataOffset)) 
+        // let calldataContent := 0x00
         // can we just prepare calldata as 0
 
         // if gt(calldatalen,0) {
@@ -68,7 +68,9 @@ object "ERC1155Yul" {
         // }
         // do _mint...
         // _mint()
-        _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2), calldataContent)
+        _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2)
+        //,calldataContent
+        )
        
       
         // check if to is a ERC1155 Receiver
@@ -86,7 +88,7 @@ object "ERC1155Yul" {
         require(eq(idsLen,amountsLen))
         
         
-        _batchMint(to,idsLen,idsOffsetAmount,amountsOffsetAmount, 0x00 )
+        _batchMint(to,idsLen,idsOffsetAmount,amountsOffsetAmount)
       }
       case 0xb48ab8b6 /*"function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts, bytes calldata data)"*/{
         
@@ -101,12 +103,8 @@ object "ERC1155Yul" {
         require(eq(idsLen,amountsLen))
         
         //TODO: handle calldaata
-        _batchMint(to,idsLen,idsOffsetAmount,amountsOffsetAmount, 0x00 )
+        _batchMint(to,idsLen,idsOffsetAmount,amountsOffsetAmount )
 
-       
-
-       
-       
       }
       
       case 0x00fdd58e /* "function balanceOf(address,uint256)" */{
@@ -175,9 +173,8 @@ object "ERC1155Yul" {
        * account address
        * id address
        * amount uint256
-       * extraData bytes calldata
       */
-      function _mint(account,id,amount, extraData){
+      function _mint(account,id,amount){
         // from is address 0
         let operator := caller()
         let from := 0x00
@@ -188,6 +185,7 @@ object "ERC1155Yul" {
         makeSingletonArrayInMemory(amount)
         _update(from,account,idsMemStart ,amountsMemStart)
 
+        _doSafeTransferAcceptanceCheck(account)
         //emit event
         emitTransferSingle(operator, from,account, id, amount)
 
@@ -209,7 +207,7 @@ object "ERC1155Yul" {
        * amounts uint256[] calldata Offset
        * extraData bytes calldata
       */
-      function _batchMint(to,idsLen,ids,amounts,extraData) {
+      function _batchMint(to,idsLen,ids,amounts) {
         let from := 0x00
         //  copy id array into memory
         // try calldatacopy
@@ -235,6 +233,19 @@ object "ERC1155Yul" {
         incrMemoryPointer()
         copyCalldataArrayIntoMemory(amounts)
         _update(from, to, idsStart,amountsStart)
+
+        // Check if to address is EOA
+
+        
+       if isContract(to) {
+        // check
+        //_doSafeTransferAcceptanceCheck
+       }
+        //prepare 
+
+        // check onERCBatch received etc
+       
+
 
         emitTransferBatch(caller(),from,to,ids,amounts, idsLen)
 
@@ -300,6 +311,29 @@ object "ERC1155Yul" {
        
 
       }
+     /*function onERC1155Received(address , address , uint256 , uint256 , bytes calldata) public override returns (bytes4)*/
+      function _doSafeTransferAcceptanceCheck(to){
+        // call opcode
+        // gas: amount of gas to send to the sub context to execute. The gas that is not used by the sub context is returned to this one.
+        // address: the account which context to execute.
+        // value: value in wei to send to the account.
+        // argsOffset: byte offset in the memory in bytes, the calldata of the sub context.
+        // argsSize: byte size to copy (size of the calldata).
+        // retOffset: byte offset in the memory in bytes, where to store the return data of the sub context.
+        // retSize: byte size to copy (size of the return data).     
+        // getcalldata
+        
+        // Step1: put in memory the stuff
+
+        let funcSelector := 0xf23a6e61
+
+
+        
+      }
+
+      function _doSafeBatchTransferAcceptanceCheck(){
+
+      }
 
       /* ---------- calldata encoding functions ---------- */
       function returnUint(v) {
@@ -360,6 +394,11 @@ object "ERC1155Yul" {
         let offsetAmount := getOffsetAmount(offsetPos)
         len := calldataload(offsetAmount)
         
+      }
+
+      function isContract(addr) -> res {
+        let codeLen := extcodesize(addr)
+        res := gt(codeLen,0)
       }
 
       /* ---------- calldata decoding functions ----------- */
