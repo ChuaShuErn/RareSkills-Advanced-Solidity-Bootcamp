@@ -135,14 +135,6 @@ object "ERC1155Yul" {
    
     // A account is a hash from someone's public key.
 
-      // external functions
-      // function mint(account,id,amount, extraData){
-      //   //require(calledByOwner())
-      //   // we need to get balance
-      //   _mint(account,id,amount,extraData)
-        
-      // }
-
       function balanceOf(account,id) -> val  {
         let innerKey := getBalanceInnerMappingKey(account,id)
          val := sload(innerKey)
@@ -186,58 +178,18 @@ object "ERC1155Yul" {
        * extraData bytes calldata
       */
       function _mint(account,id,amount, extraData){
-        // mint batch would not use _mint
         // from is address 0
+        let operator := caller()
         let from := 0x00
-
-        // TODO: convert id and amount to SingleTon Array so _update can process it
-        // Strategy I will copy the data from calldata into memory
-        // I will keep track of the pointer by storing the offset
-        // so the memory layout  
-        // 1 -> amount offset 
-        // 2 -> id offset
-        // 3 -> len amount
-        // 4 -> val amount
-        // 5 -> len id
-        // 6 -> val id
-       
-
-        /*
-         * Maing Singleton array in memory
-         */
         // pointer -> 0x80
         let idsMemStart := getMemoryPointer()
         makeSingletonArrayInMemory(id)
         let amountsMemStart := getMemoryPointer()
         makeSingletonArrayInMemory(amount)
-        
-        // let idOffset := safeAdd(getMemoryPointer(),0x40)
-        // // from 0x80, we need to move 2 words, past idsOffset, and Amount offset
-        // // so we add 0x40 (64 bytes)
-        // mstore(getMemoryPointer(),idOffset) //  id offset 
-        // incrMemoryPointer()
-        // // pointer -> 0xA0
-        // let amountOffset := safeAdd(getMemoryPointer(),0x60)
-        // // from 0x80, we need to move 4 words, past idOffset, amountOffset,idLen, idVal
-        // // since we already incremented 1 word via incrMemoryPointer,
-        // // which would result in getMemoryPointer() returning 0xA0
-        // // we will move 3 more words, so 0x60 (96 bytes)
-        // mstore(getMemoryPointer(), amountOffset) //  amount offset 
-        // incrMemoryPointer()
-        // // pointer -> 0xC0
-        // mstore(getMemoryPointer(),1) // len of id is 
-        // incrMemoryPointer()
-        // // pointer -> 0xE0
-        // mstore(getMemoryPointer(),id) // the only element of id is id
-        // incrMemoryPointer()
-        // // pointer ->0x100
-        // mstore(getMemoryPointer(), 1) // len of amount is 1
-        // incrMemoryPointer()
-        // // pointer -> 0x120
-        // mstore(getMemoryPointer(), amount) // the only element of amount is amount
-        // incrMemoryPointer()
-        // pointer -> 0x140
         _update(from,account,idsMemStart ,amountsMemStart)
+
+        //emit event
+        emitTransferSingle(operator, from,account, id, amount)
 
         // // find mapping
         // let currentBalance := balanceOf(account,id)
@@ -246,6 +198,7 @@ object "ERC1155Yul" {
         // // store newAmount to account mapping for this id
         // let innerKey := getBalanceInnerMappingKey(account,id)
         // sstore(innerKey,newAmount)
+        
         
       }
         /*
@@ -281,8 +234,9 @@ object "ERC1155Yul" {
         mstore(getMemoryPointer(), 0x20)
         incrMemoryPointer()
         copyCalldataArrayIntoMemory(amounts)
-        
         _update(from, to, idsStart,amountsStart)
+
+        emitTransferBatch(caller(),from,to,ids,amounts, idsLen)
 
     
        
@@ -324,7 +278,7 @@ object "ERC1155Yul" {
             // revert if currentFromBalance lt than thisAmount
             
 
-             // // find mapping
+        // // find mapping
         // let currentBalance := balanceOf(account,id)
         // let currentBalance := balanceOf(account,id)
         // let newAmount := safeAdd(amount,currentBalance)
@@ -552,10 +506,83 @@ object "ERC1155Yul" {
           mstore(getMemoryPointer(), val)
           incrMemoryPointer()
       }
-      
 
-      //essentially, when we want to store stuff in memroy
-      // we need to know what is the next offset (kept in track via memory pointer)
+      /* ---------- events ----------- */
+
+      // - [ ]  **`event** TransferSingle(**address** **indexed** _operator, **address** **indexed** _from, **address** **indexed** _to, **uint256** _id, **uint256** _value);`
+      // - [ ]  **`event** TransferBatch(**address** **indexed** _operator, **address** **indexed** _from, **address** **indexed** _to, **uint256**[] _ids, **uint256**[] _values);`
+      // - [ ]  **`event** ApprovalForAll(**address** **indexed** _owner, **address** **indexed** _operator, **bool** _approved);`
+      // - [ ]  **`event** URI(**string** _value, **uint256** **indexed** _id);`
+
+        //  function emitTransfer(from, to, amount) {
+        //         let signatureHash := 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
+        //         emitEvent(signatureHash, from, to, amount)
+        //     }
+        //     function emitApproval(from, spender, amount) {
+        //         let signatureHash := 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925
+        //         emitEvent(signatureHash, from, spender, amount)
+        //     }
+        //     function emitEvent(signatureHash, indexed1, indexed2, nonIndexed) {
+        //         mstore(0, nonIndexed)
+        //         log3(0, 0x20, signatureHash, indexed1, indexed2)
+        //     }
+      
+        function emitTransferSingle(_operator, _from, _to, _id,_value){
+          //keccak256("TransferSingle(address,address,address,uint256,uint256)")
+          let signatureHash := 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62
+          // for now mstore to scratch space
+          mstore(0,_id)
+          mstore(0x20, _value)
+          log4(0x00,0x40,signatureHash, _operator,_from,_to)
+        }
+
+          // _to
+      
+          /*
+          * operator caller()
+          * from address
+          * to address
+          * ids calldataoffset
+          * values calldata offset
+          * idsLen uint256 len
+          */
+        function emitTransferBatch(_operator,_from,_to,_ids,_values, idsLen){
+          let signatureHash := 0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb
+          // format
+          let start := getMemoryPointer()
+          // ids Offset
+          let idsOffset := 0x40
+          mstore(start,idsOffset)
+          incrMemoryPointer()
+          // values offset
+         //  1 word idsOffset +
+         // 1 word valuesOffset + 
+         // 1 word idsLen + 
+         //  idsLen * 32 bytes 
+          let valuesOffset := safeAdd(0x60,mul(0x20,idsLen))
+          mstore(getMemoryPointer(),valuesOffset)
+          incrMemoryPointer()
+         
+          // ids len
+          // ids n...
+          // 1 word (len) + mul(32 bytes * idsLen)
+           let amountOfCalldataToCopy := safeAdd(0x20,mul(0x20,idsLen))
+          calldatacopy(getMemoryPointer(), _ids,amountOfCalldataToCopy)
+          // values len
+          // values n...
+          setMemoryPointer(safeAdd(getMemoryPointer(),amountOfCalldataToCopy))
+          calldatacopy(getMemoryPointer(),_values, amountOfCalldataToCopy)
+          setMemoryPointer(safeAdd(getMemoryPointer(),amountOfCalldataToCopy))
+
+          // 1 word ids Offset, 1 word values offset, 1 word idsLen,
+          // 1 word valuesLen, 2 * n words number of eles
+          let memSize := safeAdd(0x80,mul(idsLen,2))
+          log4(start,memSize,signatureHash,_operator,_from,_to)
+     
+
+
+        }
+      
 
     }
   }
