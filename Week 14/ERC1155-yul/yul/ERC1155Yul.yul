@@ -29,47 +29,11 @@ object "ERC1155Yul" {
       }
 
       case 0x731133e9 /*"function mint(address to, uint256 id, uint256 amount, bytes calldata)"*/{
-        //check if theres call data
+        
+      
 
-        // TODO: 
-        // Ok minting is essentially a safeTransferFrom from address 0
-        // So what is the flow
-        // 1) revert if `address to` is 0
-        // decodeAsAddress already does that
-        // let decodedTo := decodeAsAddress(0)
-        // require(not(decodedTo,0))
-        // _update (calldata data is not used here)
-        // 
-        // 2) update balances in mapping
-        // 3) Emit either Transfer Single or Transfer Batch
-        // _updateWithAcceptanceCheck
-        // 4) check if its EOA or Contract
-        // if EOA, continue
-        // if Contract, check if onERC1155Received (calldata data is used here)
-
-        // THIS CHECKS for calldata
-        // get offset
-        // 0x00: Function selector (first 4 bytes of the keccak256 hash of the function signature)
-        // 0x04: Address `to` (20 bytes, right-padded with zeroes to fill 32 bytes)
-        // 0x24: uint256 `id` (32 bytes)
-        // 0x44: uint256 `value` (32 bytes)
-        // 0x64: Offset to the start of `data` (32 bytes, this is relative to the start of the calldata)
-        // 0x84: Length of `data` (32 bytes, specifies the number of bytes in the `data` byte array)
-        // 0xa4: Actual bytes of `data` (variable length, right-padded with zeroes to fill a multiple of 32 bytes)
-  
-        // let calldataOffsetPos := add(4,mul(0x03,0x20))
-        // let calldataOffset := calldataload(calldataOffsetPos)
-        // let calldataLen := calldataload(add(4,calldataOffset)) 
-        // let calldataContent := 0x00
-        // can we just prepare calldata as 0
-
-        // if gt(calldatalen,0) {
-        //   // modify calldataContent
-        // }
-        // do _mint...
-        // _mint()
+     
         _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2)
-        //,calldataContent
         )
        
       
@@ -168,6 +132,17 @@ object "ERC1155Yul" {
 
 
       //internal functions
+      /* call data looks like:
+      // mint with lots of call data
+      // 731133e9
+      // 0000000000000000000000005b38da6a701c568545dcfcb03fcb875f56beddc4 -> address to
+      // 0000000000000000000000000000000000000000000000000000000000000372 -> id
+      // 0000000000000000000000000000000000000000000000000000000000000066 -> val
+      // 0000000000000000000000000000000000000000000000000000000000000080 -> calldata offset
+      // 0000000000000000000000000000000000000000000000000000000000000021 -> 33 byte len
+      // 1923019230918303123292232323232380222232322211923019230193102312 -> 32 bytes of calldata
+      // 3200000000000000000000000000000000000000000000000000000000000000 -> 1 more byte of calldata    
+      */
       /*
        * @dev 
        * account address
@@ -175,17 +150,35 @@ object "ERC1155Yul" {
        * amount uint256
       */
       function _mint(account,id,amount){
-        // from is address 0
         let operator := caller()
         let from := 0x00
-        // pointer -> 0x80
-        let idsMemStart := getMemoryPointer()
-        makeSingletonArrayInMemory(id)
-        let amountsMemStart := getMemoryPointer()
-        makeSingletonArrayInMemory(amount)
-        _update(from,account,idsMemStart ,amountsMemStart)
 
-        _doSafeTransferAcceptanceCheck(account)
+        let checkArgsOffset := getMemoryPointer()
+        prepareOnERC1155ReceivedData(operator,from)
+        let checkArgsSize := sub(getMemoryPointer(), checkArgsOffset)
+
+        // mem looks like this
+        // 0x80 - 0x84 -> onERC1155ReceivedFuncSig
+        // 0x84 - 0xA4 -> operator
+        // 0xA4 - 0Xc4 -> from
+        // 0xC4 - 0xE4 -> id
+        // 0xE4 - 0x104 -> amount
+        // 0x104 - 0x124 -> calldataoffset
+        // call data len
+        // call data
+      
+        let idsMemStart := 0xC4
+        //makeSingletonArrayInMemory(id)
+        let amountsMemStart := 0xE4
+        //makeSingletonArrayInMemory(amount)
+        _update(from,account,0x01,idsMemStart ,amountsMemStart)
+
+
+        
+        if isContract(account){
+          _doSafeTransferAcceptanceCheck(account, checkArgsOffset, checkArgsSize)
+        }
+        
         //emit event
         emitTransferSingle(operator, from,account, id, amount)
 
@@ -208,38 +201,47 @@ object "ERC1155Yul" {
        * extraData bytes calldata
       */
       function _batchMint(to,idsLen,ids,amounts) {
+        let operator := caller()
         let from := 0x00
-        //  copy id array into memory
-        // try calldatacopy
-        // destOffset: byte offset in the memory where the result will be copied.
-        // offset: byte offset in the calldata to copy.
-        // size: byte size to copy.
-        // i could copy everything
-        // but i have to use address in the memory
-        // OR
-        // I could only copy from offsetIds, and all the way
-        // then sub tract each offset by 0x20 because we are not including address
-        // we will do this method
-         // let's try to return the ids arr
-        // prepare ids offset
+
+        let checkArgsOffset := getMemoryPointer()
+        prepareOnERC1155BatchReceivedData(operator,from, idsLen)
+        let checkArgsSize := sub(getMemoryPointer(), checkArgsOffset)
+
         let idsStart := getMemoryPointer()
-        mstore(getMemoryPointer(),0x20)
-         incrMemoryPointer()
-         copyCalldataArrayIntoMemory(ids)
+
+        //mem looks like this now:
+        // 0x80 - 0x84 -> onERC1155ReceivedBatchFuncSig 4
+        // 0x84 - 0xA4 -> operator  32
+        // 0xA4 - 0Xc4 -> from 32
+        // 0xC4 - 0xE4 -> id offset 32
+        // 0xE4 - 0x104 -> amounts offset 32
+        // 0x104 - 0x124 -> calldata offset 32
+        // 0x124 ... ids Len 
+
+        let idsMemStart := 0x144
+        // skip 1 word + mul(0x20,idsLen)
+        let amountsMemStart := safeAdd(safeAdd(idsMemStart,0x20),mul(0x20,idsLen))
         
-        // prepare amounts offset
-        let amountsStart := getMemoryPointer()
-        mstore(getMemoryPointer(), 0x20)
-        incrMemoryPointer()
-        copyCalldataArrayIntoMemory(amounts)
-        _update(from, to, idsStart,amountsStart)
+
+        // mstore(getMemoryPointer(),0x20)
+        //  incrMemoryPointer()
+        //  copyCalldataArrayIntoMemory(ids)
+        
+        // // prepare amounts offset
+        // let amountsStart := getMemoryPointer()
+        // mstore(getMemoryPointer(), 0x20)
+        // incrMemoryPointer()
+        // copyCalldataArrayIntoMemory(amounts)
+        _update(from, to,idsLen, idsMemStart,amountsMemStart)
 
         // Check if to address is EOA
 
         
        if isContract(to) {
-        // check
-        //_doSafeTransferAcceptanceCheck
+     
+          _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize)
+        
        }
         //prepare 
 
@@ -257,26 +259,27 @@ object "ERC1155Yul" {
        * @dev
        * from address
        * to address
-       * ids address[] memory (start-> pointing at len)
-       * values uint256[] memory (start -> pointing at len)
+       * ids address [] offset at where first ele of ids at
+       * values uint256[] memory offset where first ele of values at 
        * purpose: update state for mint, burn, transfer
       */
-      function _update(from,to,ids,amounts) {
+      function _update(from,to,len, ids,amounts) {
 
-        let operator := caller() 
+        //let operator := caller() 
         //return (ids,0x20) will return the len
-        let idsLen := mload(ids) // 1
-        let idsValue := mload(safeAdd(ids,0x20))
+        //let idsLen := mload(ids) // 1
+        //let idsValue := mload(safeAdd(ids,0x20))
         // amounts Len // 2
         // amountslen gives me ID
-        let amountsLen := mload(amounts)
-        let amountsEle := mload(safeAdd(amounts,0x20))
+        // let amountsLen := mload(amounts)
+        // let amountsEle := mload(safeAdd(amounts,0x20))
 
 
         // do a forloop to updateBalances
         // inside for loop if from is 0 , its mint, dont upodate bal
         // if to is 0, its burn, dont update address 0 bal
-         for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
+         for {let i :=0} lt(i,len) {i := add(i,1)} {
+
 
             let thisId := getEleFromMemoryArrayByIndex(ids,i)
             let thisAmount := getEleFromMemoryArrayByIndex(amounts,i)
@@ -311,8 +314,14 @@ object "ERC1155Yul" {
        
 
       }
+
+      /*
+      * to -> receiving contract address
+      * argsOffset -> memoryOffset for calldata of subcontext
+      * argsSize -> memory size for calldata of subcontext
+      */
      /*function onERC1155Received(address , address , uint256 , uint256 , bytes calldata) public override returns (bytes4)*/
-      function _doSafeTransferAcceptanceCheck(to){
+      function _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize){
         // call opcode
         // gas: amount of gas to send to the sub context to execute. The gas that is not used by the sub context is returned to this one.
         // address: the account which context to execute.
@@ -323,15 +332,50 @@ object "ERC1155Yul" {
         // retSize: byte size to copy (size of the return data).     
         // getcalldata
         
-        // Step1: put in memory the stuff
 
-        let funcSelector := 0xf23a6e61
+        // let's hardcode it
+        //  let funcSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
+        //  let offset := getMemoryPointer()
+        //  mstore(offset, funcSelector)
+        //  mstore(add(offset, 0x04), caller())       // operator
+        //  mstore(add(offset, 0x24), 0x00)           // from
+        //  mstore(add(offset, 0x44), 0x539)             // id
+        //  mstore(add(offset, 0x64), 0x01)         // amount
+        //  mstore(add(offset, 0x84), 0xa0)           // calldata offset
+        //  mstore(add(offset,0xA4),0x00) // 0x calldata
+        //  setMemoryPointer(safeAdd(getMemoryPointer(), 0xC4 ))
+        
+        
+        let success := call(
+              gas(), to, 0, checkArgsOffset, checkArgsSize, 0x00, 0x04
+            )
+
+
+        //
+        
+        // let retOffset := getMemoryPointer()
+        // let success := staticcall(
+        // gas(),
+        // to,
+        // argsOffset,
+        // argsSize,
+        // retOffset,
+        // 0x20)
+
+        // return(retOffset,0x04)
+        // let funcSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
 
 
         
       }
 
-      function _doSafeBatchTransferAcceptanceCheck(){
+      
+
+      function _doSafeBatchTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize){
+
+          let success := call(
+              gas(), to, 0, checkArgsOffset, checkArgsSize, 0x00, 0x04
+            )
 
       }
 
@@ -363,16 +407,16 @@ object "ERC1155Yul" {
          offsetAmount := add(4,calldataload(pos))
       }
 
+      // mload(offset) is first ele
       function getEleFromMemoryArrayByIndex(offset, index) -> ele {
-        // if index is 0, skip by 1 * 32 bytes
-        // if index is 1, skip by 2 * 32 bytes
-        // if index is n, skipBy n+1 * 32 bytes
-        let indexAfterLen := add(index,1)
-        let skipBy := mul(indexAfterLen,0x20)
-
-        let eleOffsetAtIndex := add(skipBy,offset)
-        ele := mload(eleOffsetAtIndex)
+        // if index is 0, skip by 0 + 0*32 bytes
+        // if index is 1, skip by 0 + 1* 32 bytes
+        // if index is n, skipBy 0 + n * 32 bytes
+        let memOffset := safeAdd(offset,mul(index,0x20))
+        ele := mload(memOffset)
       }
+
+      
       //calldata version
       function getUintElementInCalldataArrayByIndex(offsetAmount, index) -> ele {
         let indexAfterLen := add(index,1)
@@ -387,6 +431,93 @@ object "ERC1155Yul" {
         ele := calldataload(eleOffsetAmount)
 
       }
+
+      /*
+      * @dev this function places the payload for onERC1155Received in memory
+      *  This payload is also to be reused for _update
+      * 
+      */
+      function prepareOnERC1155ReceivedData(operator,from){
+        let memStart := getMemoryPointer()
+        let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000                                 
+        //first put in the func sig      
+        mstore(memStart, onERC1155ReceivedSelector)
+        // move pointer by 4
+        setMemoryPointer(safeAdd(getMemoryPointer(),0x04))
+        // put operator
+        mstore(getMemoryPointer(), operator)
+        incrMemoryPointer()
+        // put from
+        mstore(getMemoryPointer(),from)
+        incrMemoryPointer()
+
+        let idStartPointer := getMemoryPointer()
+        let extraDataStartPos := safeAdd(idStartPointer,0x40)
+        // when we do calldatasize, we get total size
+        // then we need to sub totalSize - func sig, address to (32 + 4 bytes)
+        let calldataOffset := 0x24
+        let sizeRequired := sub(calldatasize(),calldataOffset)
+        calldatacopy(idStartPointer,calldataOffset,sizeRequired)
+        // extra data offset needs to be at 100 all the time
+        mstore(extraDataStartPos,0xa0)
+        // move pointer
+        setMemoryPointer(safeAdd(sizeRequired,idStartPointer))
+      }
+
+      /*
+      * @dev this function places the payload for onERC1155BatchReceived in memory
+      *  This payload is also to be reused for _update
+      * 
+      */
+      function prepareOnERC1155BatchReceivedData(operator,from, idsLen){
+        let memStart := getMemoryPointer()
+        let onERC1155BatchReceivedSelector := 0xbc197c8100000000000000000000000000000000000000000000000000000000
+        mstore(memStart, onERC1155BatchReceivedSelector)
+        // move pointer by 4
+        setMemoryPointer(safeAdd(getMemoryPointer(),0x04))
+        // put operator
+        mstore(getMemoryPointer(), operator)
+        incrMemoryPointer()
+        // put from
+        mstore(getMemoryPointer(),from)
+        incrMemoryPointer()
+
+        let idsOffsetStartPointer := getMemoryPointer()
+        // when we do calldatasize, we get total size
+        // then we need to sub totalSize - func sig, address to (32 + 4 bytes)
+        let calldataOffset := 0x24
+        let sizeRequired := sub(calldatasize(),calldataOffset)
+        calldatacopy(idsOffsetStartPointer,calldataOffset,sizeRequired)
+
+        //mem looks like this now:
+        // 0x80 - 0x84 -> onERC1155ReceivedBathFuncSig 4
+        // 0x84 - 0xA4 -> operator  32
+        // 0xA4 - 0Xc4 -> from 32
+        // 0xC4 - 0xE4 -> id offset 32
+        // 0xE4 - 0x104 -> amounts offset 32
+        // 0x104 - 0x124 -> calldata offset 32
+        // 0x124 ... ids Len 
+        
+        // id offset is  + 32 *5 
+        let idsOffset := mul(0x20,5)
+        mstore(0xC4, idsOffset)
+
+
+        // amounts offset := idsOffset + 0x20 + mul(0x20,idsLen)
+        let amountsOffset := safeAdd(safeAdd(idsOffset,0x20),mul(0x20,idsLen))
+        mstore(0xE4, amountsOffset)
+
+        // calldata offset := idsOffset + 0x20 + mul(0x20,idsLen) + 0x20 + mul(0x20,idsLen)
+        let extraDataOffset := safeAdd(safeAdd(amountsOffset,0x20),mul(0x20,idsLen))
+        mstore(0x104, extraDataOffset)
+
+        setMemoryPointer(safeAdd(sizeRequired,idsOffsetStartPointer))
+        
+
+
+      }
+
+
 
       function getArrayLen(offsetPos) -> len {
         // let pos := add(4, mul(offsetPos, 0x20))
@@ -575,17 +706,25 @@ object "ERC1155Yul" {
           log4(0x00,0x40,signatureHash, _operator,_from,_to)
         }
 
-          // _to
-      
+
+          
           /*
           * operator caller()
           * from address
           * to address
-          * ids calldataoffset
-          * values calldata offset
+          * idsMemStart offset of first ele of ids
+          * amountsMemStart offset of first ele of amounts
           * idsLen uint256 len
           */
-        function emitTransferBatch(_operator,_from,_to,_ids,_values, idsLen){
+          
+        function emitTransferBatch(_operator,_from,_to,_ids ,_values, idsLen){
+          // mem must looks something like
+          // id offset
+          // values offset
+          // id len
+          // ids[0]...
+          // values len
+          // values[0]...
           let signatureHash := 0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb
           // format
           let start := getMemoryPointer()
@@ -613,15 +752,13 @@ object "ERC1155Yul" {
           calldatacopy(getMemoryPointer(),_values, amountOfCalldataToCopy)
           setMemoryPointer(safeAdd(getMemoryPointer(),amountOfCalldataToCopy))
 
-          // 1 word ids Offset, 1 word values offset, 1 word idsLen,
-          // 1 word valuesLen, 2 * n words number of eles
-          let memSize := safeAdd(0x80,mul(idsLen,2))
-          log4(start,memSize,signatureHash,_operator,_from,_to)
-     
+        // memsize := 32 idsoffset + 32 valuesOffset, + 64 lens + (2 * idsLen) * 32 bytes
+          let memSize := safeAdd(0x80,mul(0x20,mul(idsLen,2)))
+          
 
+          log4(start,memSize,signatureHash,_operator,_from,_to)
 
         }
-      
 
     }
   }
