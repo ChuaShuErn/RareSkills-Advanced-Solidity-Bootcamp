@@ -198,32 +198,32 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
         assertBytesEq(to.mintData(), "testing 123");
     }
 
-    // function testBatchMintToEOA() public {
-    //     uint256[] memory ids = new uint256[](5);
-    //     ids[0] = 1337;
-    //     ids[1] = 1338;
-    //     ids[2] = 1339;
-    //     ids[3] = 1340;
-    //     ids[4] = 1341;
+    function testBatchMintToEOA() public {
+        uint256[] memory ids = new uint256[](5);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+        ids[3] = 1340;
+        ids[4] = 1341;
 
-    //     uint256[] memory amounts = new uint256[](5);
-    //     amounts[0] = 100;
-    //     amounts[1] = 200;
-    //     amounts[2] = 300;
-    //     amounts[3] = 400;
-    //     amounts[4] = 500;
+        uint256[] memory amounts = new uint256[](5);
+        amounts[0] = 100;
+        amounts[1] = 200;
+        amounts[2] = 300;
+        amounts[3] = 400;
+        amounts[4] = 500;
 
-    //     token.batchMint(address(0xBEEF), ids, amounts,"");
+        token.batchMint(address(0xBEEF), ids, amounts,"");
 
-    //     //console.log("idsLen:", eleAtIndex2);
-    //     // trying to get amount at 300
+        //console.log("idsLen:", eleAtIndex2);
+        // trying to get amount at 300
 
-    //     assertEq(token.balanceOf(address(0xBEEF), 1337), 100);
-    //     assertEq(token.balanceOf(address(0xBEEF), 1338), 200);
-    //     assertEq(token.balanceOf(address(0xBEEF), 1339), 300);
-    //     assertEq(token.balanceOf(address(0xBEEF), 1340), 400);
-    //     assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
-    // }
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 100);
+        assertEq(token.balanceOf(address(0xBEEF), 1338), 200);
+        assertEq(token.balanceOf(address(0xBEEF), 1339), 300);
+        assertEq(token.balanceOf(address(0xBEEF), 1340), 400);
+        assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
+    }
         function testBatchMintToERC1155Recipient() public {
             ERC1155Recipient to = new ERC1155Recipient();
 
@@ -256,13 +256,13 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
             assertEq(token.balanceOf(address(to), 1341), 500);
         }
 
-        // function testBurn() public {
-        //     token.mint(address(0xBEEF), 1337, 100, "");
+        function testBurn() public {
+            token.mint(address(0xBEEF), 1337, 100, "");
 
-        //     token.burn(address(0xBEEF), 1337, 70);
+            token.burn(address(0xBEEF), 1337, 70);
 
-        //     assertEq(token.balanceOf(address(0xBEEF), 1337), 30);
-        // }
+            assertEq(token.balanceOf(address(0xBEEF), 1337), 30);
+        }
 
     //     function testBatchBurn() public {
     //         uint256[] memory ids = new uint256[](5);
@@ -483,22 +483,23 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
     //     token.mint(address(0), 1337, 1, "");
     // }
 
-    //     function testFailMintToNonERC155Recipient() public {
-    //         token.mint(address(new NonERC1155Recipient()), 1337, 1, "");
-    //     }
+        function testFailMintToNonERC155Recipient() public {
+            token.mint(address(new NonERC1155Recipient()), 1337, 1, "");
+        }
 
-    //     function testFailMintToRevertingERC155Recipient() public {
-    //         token.mint(address(new RevertingERC1155Recipient()), 1337, 1, "");
-    //     }
+        function testFailMintToRevertingERC155Recipient() public {
+            token.mint(address(new RevertingERC1155Recipient()), 1337, 1, "");
+        }
 
-    //     function testFailMintToWrongReturnDataERC155Recipient() public {
-    //         token.mint(address(new RevertingERC1155Recipient()), 1337, 1, "");
-    //     }
+        //woah this is wrong
+        function testFailMintToWrongReturnDataERC155Recipient() public {
+            token.mint(address(new WrongReturnDataERC1155Recipient()), 1337, 1, "");
+        }
 
-    //     function testFailBurnInsufficientBalance() public {
-    //         token.mint(address(0xBEEF), 1337, 70, "");
-    //         token.burn(address(0xBEEF), 1337, 100);
-    //     }
+        function testFailBurnInsufficientBalance() public {
+            token.mint(address(0xBEEF), 1337, 70, "");
+            token.burn(address(0xBEEF), 1337, 100);
+        }
 
     //     function testFailSafeTransferFromInsufficientBalance() public {
     //         address from = address(0xABCD);

@@ -23,6 +23,7 @@ object "ERC1155Yul" {
         // mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2), 0x00 )
         // returnTrue()
         _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2))
+        
 
       
 
@@ -85,6 +86,14 @@ object "ERC1155Yul" {
         require(eq(accountsLen,idsLen))
         balanceOfBatch(accountsOffset,idsOffset,accountsLen,idsLen)
         
+      }
+
+      case 0x8a94b05f /*function burn(address from, uint256 id, uint256 amount, bytes calldata) external*/{
+          _burn(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2))
+      }
+
+      case 0xf5298aca/*function burn(address from, uint256 id, uint256 amount) external*/{
+          _burn(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2))
       }
 
       
@@ -174,9 +183,9 @@ object "ERC1155Yul" {
         _update(from,account,0x01,idsMemStart ,amountsMemStart)
 
 
-        
+        let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
         if isContract(account){
-          _doSafeTransferAcceptanceCheck(account, checkArgsOffset, checkArgsSize)
+          _doSafeTransferAcceptanceCheck(account, checkArgsOffset, checkArgsSize,onERC1155ReceivedSelector)
         }
         
         //emit event
@@ -201,6 +210,7 @@ object "ERC1155Yul" {
        * extraData bytes calldata
       */
       function _batchMint(to,idsLen,ids,amounts) {
+        let onERC1155BatchReceivedSelector := 0xbc197c8100000000000000000000000000000000000000000000000000000000
         let operator := caller()
         let from := 0x00
 
@@ -240,7 +250,7 @@ object "ERC1155Yul" {
         
        if isContract(to) {
      
-          _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize)
+          _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize,onERC1155BatchReceivedSelector)
         
        }
         //prepare 
@@ -253,6 +263,28 @@ object "ERC1155Yul" {
 
     
        
+      }
+
+
+      function _burn(from,id,amount){
+
+        let operator := caller()
+        let to := 0x00
+
+        let checkArgsOffset := getMemoryPointer()
+        prepareOnERC1155ReceivedData(operator,from)
+        let checkArgsSize := sub(getMemoryPointer(), checkArgsOffset)
+        let idsStart := getMemoryPointer()
+
+        let idsMemStart := 0xC4
+        //makeSingletonArrayInMemory(id)
+        let amountsMemStart := 0xE4
+        //makeSingletonArrayInMemory(amount)
+        _update(from,to,0x01,idsMemStart ,amountsMemStart)
+
+        //No need to check onReceivedSelector
+        emitTransferSingle(operator, from,to, id, amount)
+
       }
 
       /*
@@ -287,18 +319,7 @@ object "ERC1155Yul" {
 
           // if from is not zero, update address
           if iszero(iszero(from)) {
-            // get balances for from
-            
-            // revert if currentFromBalance lt than thisAmount
-            
-
-        // // find mapping
-        // let currentBalance := balanceOf(account,id)
-        // let currentBalance := balanceOf(account,id)
-        // let newAmount := safeAdd(amount,currentBalance)
-        // // store newAmount to account mapping for this id
-        // let innerKey := getBalanceInnerMappingKey(account,id)
-        // sstore(innerKey,newAmount)
+             safeSubtractFromBalance(from,thisId,thisAmount)
             
           }
           
@@ -321,7 +342,7 @@ object "ERC1155Yul" {
       * argsSize -> memory size for calldata of subcontext
       */
      /*function onERC1155Received(address , address , uint256 , uint256 , bytes calldata) public override returns (bytes4)*/
-      function _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize){
+      function _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize,thisSelector){
         // call opcode
         // gas: amount of gas to send to the sub context to execute. The gas that is not used by the sub context is returned to this one.
         // address: the account which context to execute.
@@ -345,10 +366,22 @@ object "ERC1155Yul" {
         //  mstore(add(offset,0xA4),0x00) // 0x calldata
         //  setMemoryPointer(safeAdd(getMemoryPointer(), 0xC4 ))
         
-        
+        let retOffset := getMemoryPointer()
         let success := call(
-              gas(), to, 0, checkArgsOffset, checkArgsSize, 0x00, 0x04
+              gas(), to, 0, checkArgsOffset, checkArgsSize, retOffset, 0x20
             )
+
+        if iszero(success){
+          revert(0,0)
+        }
+        
+        let returnedFuncSig := mload(retOffset)
+        if iszero(eq(thisSelector,returnedFuncSig)){
+          revert(0,0)
+        }
+        incrMemoryPointer()
+
+
 
 
         //
@@ -369,15 +402,6 @@ object "ERC1155Yul" {
         
       }
 
-      
-
-      function _doSafeBatchTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize){
-
-          let success := call(
-              gas(), to, 0, checkArgsOffset, checkArgsSize, 0x00, 0x04
-            )
-
-      }
 
       /* ---------- calldata encoding functions ---------- */
       function returnUint(v) {
@@ -396,6 +420,12 @@ object "ERC1155Yul" {
       function safeAdd(a,b) -> val {
         val := add(a,b)
         if or(lt(val,a), lt(val,b)) {revert(0,0)}
+      }
+
+      function safeSubtract(a,b) -> val {
+        val := sub(a,b)
+
+        if gt(val,a) {revert(0,0)}
       }
    
       function require(condition) {
@@ -609,6 +639,10 @@ object "ERC1155Yul" {
       }
 
       function safeSubtractFromBalance(account,id,amount){
+        let innerKey := getBalanceInnerMappingKey(account,id)
+        let currentBal := sload(innerKey)
+        let newBal :=  safeSubtract(currentBal, amount)
+        sstore(innerKey,newBal)
 
       }
 
