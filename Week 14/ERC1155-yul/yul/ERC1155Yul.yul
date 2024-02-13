@@ -17,6 +17,34 @@ object "ERC1155Yul" {
       //Dispatcher
       //0x156e29f6 mint addr
       switch selector()
+
+      case 0xa22cb465 /*function setApprovalForAll(address operator, bool approved) external;*/{
+        
+        let _operator := decodeAsAddress(0)
+        // operator cannot be 0
+        require(_operator)
+        // require operator cannot be the caller
+        let _owner := caller()
+        if eq(_operator,_owner){
+          revert(0,0)
+        }
+
+        let _approved := decodeAsUint(1)
+        _setApprovalForAll(_owner,_operator,_approved)
+      }
+
+      case 0xe985e9c5 /*function isApprovedForAll(address account, address operator) external view returns (bool)*/{
+        let _account := decodeAsAddress(0)
+        // _account cannot be 0
+        require(_account)
+        // _operator cannot be 0
+        let _operator := decodeAsAddress(1)
+        require(_operator)
+         let isApproved := getIsApprovedForAll(_account,_operator)
+         mstore(0,isApproved)
+         return(0,0x20)
+      }
+
       case 0x156e29f6 /* "function mint(address,uint256,uint256)" */{
         // TODO: put in bytes extra data
         // Let's check if 0x00 serves its purpose as 0 bytes extradata
@@ -25,11 +53,9 @@ object "ERC1155Yul" {
         let to := decodeAsAddress(0)
         // to cannot be address 0
         require(to)
+
         _mint(to,decodeAsUint(1),decodeAsUint(2))
-        
-
       
-
       }
 
       case 0x731133e9 /*"function mint(address to, uint256 id, uint256 amount, bytes calldata)"*/{
@@ -373,11 +399,14 @@ object "ERC1155Yul" {
           if iszero(iszero(to)){
             safeAddToBalance(to,thisId, thisAmount)
           }
-
-         
         }
-        
-       
+      }
+
+      function _setApprovalForAll(_owner, _operator, _approved){
+
+        let approvalMappingInnerKey := getApprovalMappingInnerKey(_owner, _operator)
+        sstore(approvalMappingInnerKey,_approved)
+        // TODO: Emit approval for all event
 
       }
 
@@ -425,26 +454,6 @@ object "ERC1155Yul" {
           revert(0,0)
         }
         incrMemoryPointer()
-
-
-
-
-        //
-        
-        // let retOffset := getMemoryPointer()
-        // let success := staticcall(
-        // gas(),
-        // to,
-        // argsOffset,
-        // argsSize,
-        // retOffset,
-        // 0x20)
-
-        // return(retOffset,0x04)
-        // let funcSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
-
-
-        
       }
 
 
@@ -610,10 +619,6 @@ object "ERC1155Yul" {
           let firstEleInAmountOffset := safeAdd(amountsOffsetAmount, 0x20)
           calldatacopy(amountsMemStart,firstEleInAmountOffset,copySize)
           setMemoryPointer(safeAdd(amountsMemStart,copySize))
-
-            
-
-
       }
 
 
@@ -636,6 +641,7 @@ object "ERC1155Yul" {
         s := div(calldataload(0), 0x100000000000000000000000000000000000000000000000000000000)
       }
 
+      //TODO: Fix this this is inaccurate
       function revertIfNotAddress(val) {
         if iszero(iszero(and(val, not(0xffffffffffffffffffffffffffffffffffffffff)))) {
                     revert(0, 0)
@@ -675,13 +681,34 @@ object "ERC1155Yul" {
         p := 1
       }
 
-
+      function getApprovalMappingPos() -> p {
+        p := 2
+      }
 
       /* ---------- storage access----------- */
 
       function owner() -> owr {
         let pos := getOwnerPos()
         owr := sload(pos)
+      }
+
+      function getApprovalMappingOuterKey(_owner) -> outerKey {
+        let approvalMappingPos := getApprovalMappingPos()
+        mstore(0,_owner)
+        mstore(0x20, approvalMappingPos)
+        outerKey := keccak256(0,0x40)
+      }
+
+      function getApprovalMappingInnerKey(_owner,_operator) -> innerKey {
+        let outerKey := getApprovalMappingOuterKey(_owner)
+        mstore(0, _operator)
+        mstore(0x20, outerKey)
+        innerKey := keccak256(0,0x40)
+      }
+
+      function getIsApprovedForAll(_owner,_operator) -> isApproved {
+        let innerKey := getApprovalMappingInnerKey(_owner,_operator)
+        isApproved := sload(innerKey)
       }
 
       function getBalanceOuterMappingKey(id) -> outerKey {
@@ -847,7 +874,6 @@ object "ERC1155Yul" {
         // memsize := 32 idsoffset + 32 valuesOffset, + 64 lens + (2 * idsLen) * 32 bytes
           let memSize := safeAdd(0x80,mul(0x20,mul(idsLen,2)))
           
-
           log4(start,memSize,signatureHash,_operator,_from,_to)
 
         }
