@@ -769,17 +769,6 @@ object "ERC1155Yul" {
 
       }
 
-      // stores length of 1 and val from a single val into memory
-      // moves pointer
-      // returns start of array (len)
-      function makeSingletonArrayInMemory(val) {
-          let arrayStart := getMemoryPointer()
-          mstore(arrayStart,0x01) // len of 1
-          incrMemoryPointer()
-          mstore(getMemoryPointer(), val)
-          incrMemoryPointer()
-      }
-
       /* ---------- events ----------- */
 
       // - [ ]  **`event** TransferSingle(**address** **indexed** _operator, **address** **indexed** _from, **address** **indexed** _to, **uint256** _id, **uint256** _value);`
