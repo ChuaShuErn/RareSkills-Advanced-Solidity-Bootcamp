@@ -18,6 +18,35 @@ object "ERC1155Yul" {
       //0x156e29f6 mint addr
       switch selector()
 
+      case 0xf242432a/*function safeTransferFrom(address from, address to, uint256 id, uint256 value, bytes calldata data) external*/{
+        
+        
+        //from and to cannot be 0
+        let from := decodeAsAddress(0)
+        require(from)
+        let to := decodeAsAddress(1)
+        require(to)
+        //caller must be approved
+        let callerIsApproved := getIsApprovedForAll(from, caller())
+        require(callerIsApproved)
+
+       
+      }
+      case 0x2eb2c2d6 /*function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external*/{
+        //from and to cannot be 0
+        let from := decodeAsAddress(0)
+        require(from)
+        let to := decodeAsAddress(1)
+        require(to)
+
+      }
+
       case 0xa22cb465 /*function setApprovalForAll(address operator, bool approved) external;*/{
         
         let _operator := decodeAsAddress(0)
