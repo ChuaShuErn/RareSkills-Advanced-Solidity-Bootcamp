@@ -22,7 +22,10 @@ object "ERC1155Yul" {
         // Let's check if 0x00 serves its purpose as 0 bytes extradata
         // mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2), 0x00 )
         // returnTrue()
-        _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2))
+        let to := decodeAsAddress(0)
+        // to cannot be address 0
+        require(to)
+        _mint(to,decodeAsUint(1),decodeAsUint(2))
         
 
       
@@ -30,11 +33,11 @@ object "ERC1155Yul" {
       }
 
       case 0x731133e9 /*"function mint(address to, uint256 id, uint256 amount, bytes calldata)"*/{
-        
-      
-
-     
-        _mint(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2)
+    
+        let to := decodeAsAddress(0)
+        // to cannot be address 0
+        require(to)
+        _mint(to,decodeAsUint(1),decodeAsUint(2)
         )
        
       
@@ -44,6 +47,8 @@ object "ERC1155Yul" {
       //
       case 0x0ca83480 /*"function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts)"*/{
         let to := decodeAsAddress(0)
+        // to cannot be address 0
+        require(to)
         let idsLen := getArrayLen(1)
         let amountsLen := getArrayLen(2)
         let idsOffsetAmount := getOffsetAmount(1)
@@ -53,12 +58,14 @@ object "ERC1155Yul" {
         require(eq(idsLen,amountsLen))
         
         
+        
         _batchMint(to,idsLen,idsOffsetAmount,amountsOffsetAmount)
       }
       case 0xb48ab8b6 /*"function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts, bytes calldata data)"*/{
         
-        // address cannot be 0
         let to := decodeAsAddress(0)
+        // to cannot be address 0
+        require(to)
         let idsLen := getArrayLen(1)
         let amountsLen := getArrayLen(2)
         let idsOffsetAmount := getOffsetAmount(1)
@@ -73,7 +80,10 @@ object "ERC1155Yul" {
       }
       
       case 0x00fdd58e /* "function balanceOf(address,uint256)" */{
-        returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
+         let account := decodeAsAddress(0)
+        // account cannot be address 0
+        require(account)
+        returnUint(balanceOf(account, decodeAsUint(1)))
       }
 
       case 0x4e1273f4 /*"function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids) external view returns (uint256[] memory)"*/{
@@ -88,15 +98,26 @@ object "ERC1155Yul" {
         
       }
 
-      case 0x8a94b05f /*function burn(address from, uint256 id, uint256 amount, bytes calldata) external*/{
-          _burn(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2))
-      }
-
       case 0xf5298aca/*function burn(address from, uint256 id, uint256 amount) external*/{
           _burn(decodeAsAddress(0),decodeAsUint(1),decodeAsUint(2))
       }
 
-      
+      case 0xf6eb127a/*function batchBurn(address from, uint256[] calldata ids, uint256[] calldata amounts) external;*/{
+        let from := decodeAsAddress(0)
+        //address cannot be 0
+        require(from)
+        let idsLen := getArrayLen(1)
+        let amountsLen := getArrayLen(2)
+        let idsOffsetAmount := getOffsetAmount(1)
+        let amountsOffsetAmount := getOffsetAmount(2)
+
+        // require idslen and amounts len are the same
+        require(eq(idsLen,amountsLen))
+        
+        //TODO: handle calldaata
+        _batchBurn(from,idsLen,idsOffsetAmount,amountsOffsetAmount )
+      }
+ 
       // default case to revert if unidentified selector found
       default {
         
@@ -230,6 +251,7 @@ object "ERC1155Yul" {
         // 0x124 ... ids Len 
 
         let idsMemStart := 0x144
+        let idsMemOffset := mload(0xC4)
         // skip 1 word + mul(0x20,idsLen)
         let amountsMemStart := safeAdd(safeAdd(idsMemStart,0x20),mul(0x20,idsLen))
         
@@ -266,10 +288,19 @@ object "ERC1155Yul" {
       }
 
 
+      /*
+       * @dev we will use prepareOnERC1155ReceivedData, 
+       * This is to reuse code
+       * It is important to note that extra Data will not be used
+       * as burning will send to 0 address, not a ERC1155 Receiver
+       */
+
       function _burn(from,id,amount){
 
         let operator := caller()
         let to := 0x00
+
+       
 
         let checkArgsOffset := getMemoryPointer()
         prepareOnERC1155ReceivedData(operator,from)
@@ -284,6 +315,20 @@ object "ERC1155Yul" {
 
         //No need to check onReceivedSelector
         emitTransferSingle(operator, from,to, id, amount)
+
+      }
+
+      function _batchBurn(from,idsLen,idsOffsetAmount,amountsOffsetAmount ){
+
+        let operator := caller()
+        let to := 0x00
+
+        let idsMemStart := getMemoryPointer()
+
+        let amountsMemStart := prepareBatchBurnDataInMemory(idsOffsetAmount, amountsOffsetAmount, idsLen)
+    
+        _update(from, to,idsLen, idsMemStart,amountsMemStart)
+        emitTransferBatch(caller(),from,to,idsOffsetAmount,amountsOffsetAmount, idsLen)
 
       }
 
@@ -542,7 +587,31 @@ object "ERC1155Yul" {
         mstore(0x104, extraDataOffset)
 
         setMemoryPointer(safeAdd(sizeRequired,idsOffsetStartPointer))
-        
+      }
+
+
+      //calldata looks like this:
+      // 0x00 - 0x04 -> func sig
+      // 0x04 - 0x24 -> address from
+      // 0x24 - 0x44 -> idOffset
+      // 0x44 - 0x64 -> amountOffset
+      //0x64 - 0x84 -> idLen...
+      function  prepareBatchBurnDataInMemory(idsOffsetAmount, amountsOffsetAmount, idsLen) ->  amountsMemStart  {
+
+          let start := getMemoryPointer()
+          // copy calldata from offset point len and size
+          // first Ele
+          let firstEleInIdOffset := safeAdd(idsOffsetAmount,0x20)
+          let copySize := mul(0x20,idsLen)
+          calldatacopy(start,firstEleInIdOffset,copySize)
+          // move pointer
+          setMemoryPointer(safeAdd(start,copySize))
+          amountsMemStart := getMemoryPointer()
+          let firstEleInAmountOffset := safeAdd(amountsOffsetAmount, 0x20)
+          calldatacopy(amountsMemStart,firstEleInAmountOffset,copySize)
+          setMemoryPointer(safeAdd(amountsMemStart,copySize))
+
+            
 
 
       }
