@@ -28,7 +28,13 @@ object "ERC1155Yul" {
         require(to)
         //caller must be approved
         let callerIsApproved := getIsApprovedForAll(from, caller())
-        require(callerIsApproved)
+        // if from == caller, its fine
+        if iszero(eq(from,caller())){
+          require(callerIsApproved)
+        }
+        
+        _safeTransferFrom(from,to,decodeAsUint(3),decodeAsUint(4))
+        returnTrue()
 
        
       }
@@ -44,6 +50,20 @@ object "ERC1155Yul" {
         require(from)
         let to := decodeAsAddress(1)
         require(to)
+        //caller must be approved
+        let callerIsApproved := getIsApprovedForAll(from, caller())
+        // if from == caller, its fine
+          if iszero(eq(from,caller())){
+          require(callerIsApproved)
+        }
+        let idsLen := getArrayLen(2)
+        let amountsLen := getArrayLen(3)
+          // require idslen and amounts len are the same
+        require(eq(idsLen,amountsLen))
+
+        let idsOffsetAmount := getOffsetAmount(2)
+        let amountsOffsetAmount := getOffsetAmount(3)
+        _safeBatchTransferFrom(from,to, idsLen, idsOffsetAmount,amountsOffsetAmount)
 
       }
 
@@ -239,7 +259,8 @@ object "ERC1155Yul" {
         let from := 0x00
 
         let checkArgsOffset := getMemoryPointer()
-        prepareOnERC1155ReceivedData(operator,from)
+        let calldataOffset := 0x24
+        prepareOnERC1155ReceivedData(operator,from, calldataOffset)
         let checkArgsSize := sub(getMemoryPointer(), checkArgsOffset)
 
         // mem looks like this
@@ -289,9 +310,9 @@ object "ERC1155Yul" {
         let onERC1155BatchReceivedSelector := 0xbc197c8100000000000000000000000000000000000000000000000000000000
         let operator := caller()
         let from := 0x00
-
+        let calldataOffset := 0x24
         let checkArgsOffset := getMemoryPointer()
-        prepareOnERC1155BatchReceivedData(operator,from, idsLen)
+        prepareOnERC1155BatchReceivedData(operator,from, idsLen, calldataOffset)
         let checkArgsSize := sub(getMemoryPointer(), checkArgsOffset)
 
         let idsStart := getMemoryPointer()
@@ -333,13 +354,7 @@ object "ERC1155Yul" {
         //prepare 
 
         // check onERCBatch received etc
-       
-
-
         emitTransferBatch(caller(),from,to,ids,amounts, idsLen)
-
-    
-       
       }
 
 
@@ -354,13 +369,14 @@ object "ERC1155Yul" {
 
         let operator := caller()
         let to := 0x00
+        let calldataOffset := 0x24
 
        
 
         let checkArgsOffset := getMemoryPointer()
-        prepareOnERC1155ReceivedData(operator,from)
+        prepareOnERC1155ReceivedData(operator,from, calldataOffset)
         let checkArgsSize := sub(getMemoryPointer(), checkArgsOffset)
-        let idsStart := getMemoryPointer()
+        //let idsStart := getMemoryPointer()
 
         let idsMemStart := 0xC4
         //makeSingletonArrayInMemory(id)
@@ -438,6 +454,111 @@ object "ERC1155Yul" {
         // TODO: Emit approval for all event
 
       }
+      //calldata looks like this
+      // 0x00 - 0x04 fuunc sig
+      // 0x04 - 0x24 address from
+      // 0x24-0x44 address to
+      // 0x44 - 0x64 uint256 id
+      // 0x64 - 0x88 uint256 val
+      //0x84 - 0xA4 calldataoffset
+      function _safeTransferFrom(from,to,id,amount){
+
+        let operator := caller()
+        let checkArgsOffset := getMemoryPointer()
+        let calldataOffset := 0x44
+        prepareOnERC1155ReceivedData(operator,from,calldataOffset)
+        // mem looks like this
+        // 0x80 - 0x84 -> onERC1155ReceivedFuncSig
+        // 0x84 - 0xA4 -> operator
+        // 0xA4 - 0Xc4 -> from
+        // 0xC4 - 0xE4 -> id
+        // 0xE4 - 0x104 -> amount
+        // 0x104 - 0x124 -> calldataoffset -> set to 0xa0
+        // call data len
+        // call data
+        let checkArgsSize := sub(getMemoryPointer(), checkArgsOffset)
+
+        let idsMemStart := 0xC4
+        //makeSingletonArrayInMemory(id)
+        let amountsMemStart := 0xE4
+        //makeSingletonArrayInMemory(amount)
+        _update(from,to,0x01,idsMemStart ,amountsMemStart)
+
+
+        let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
+        if isContract(to){
+          _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize,onERC1155ReceivedSelector)
+        }
+        
+        //emit event
+        emitTransferSingle(operator, from,to, id, amount)
+
+      }
+      //calldata looks like this
+      // 0x00 - 0x04 func sig
+      // 0x04 - 0x24 address from
+      // 0x24 - 0x44 address to
+      // 0x44 - 0x64 ids offset
+      // 0x64 - 0x84 - values offset
+      // 0x84 - 0xA4 - calldata extradata offset
+      // 0xA4 - 0xC4 - idsLen
+      //...
+     function _safeBatchTransferFrom(from,to, idsLen, idsOffsetAmount,amountsOffsetAmount){
+
+       let onERC1155BatchReceivedSelector := 0xbc197c8100000000000000000000000000000000000000000000000000000000
+        let operator := caller()
+
+        let calldataOffset := 0x44
+
+         let checkArgsOffset := getMemoryPointer()
+        prepareOnERC1155BatchReceivedData(operator,from, idsLen, calldataOffset)
+
+
+        //mem looks like this now:
+        // 0x80 - 0x84 -> onERC1155ReceivedBatchFuncSig 4
+        // 0x84 - 0xA4 -> operator  32
+        // 0xA4 - 0Xc4 -> from 32
+        // 0xC4 - 0xE4 -> id offset 32 -> always 160
+        // 0xE4 - 0x104 -> amounts offset 32
+        // 0x104 - 0x124 -> calldata offset 32
+        // 0x124 ... ids Len 
+
+
+        let checkArgsSize := sub(getMemoryPointer(), checkArgsOffset)
+
+        let idsStart := getMemoryPointer()
+
+
+        let idsMemStart := 0x144
+        let idsMemOffset := mload(0xC4)
+        // skip 1 word + mul(0x20,idsLen)
+        let amountsMemStart := safeAdd(safeAdd(idsMemStart,0x20),mul(0x20,idsLen))
+        
+
+        // mstore(getMemoryPointer(),0x20)
+        //  incrMemoryPointer()
+        //  copyCalldataArrayIntoMemory(ids)
+        
+        // // prepare amounts offset
+        // let amountsStart := getMemoryPointer()
+        // mstore(getMemoryPointer(), 0x20)
+        // incrMemoryPointer()
+        // copyCalldataArrayIntoMemory(amounts)
+        _update(from, to,idsLen, idsMemStart,amountsMemStart)
+
+        // Check if to address is EOA
+
+        
+       if isContract(to) {
+     
+          _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize,onERC1155BatchReceivedSelector)
+        
+       }
+        //prepare 
+
+        // check onERCBatch received etc
+        emitTransferBatch(caller(),from,to,idsOffsetAmount,amountsOffsetAmount, idsLen)
+     }
 
       /*
       * to -> receiving contract address
@@ -550,7 +671,7 @@ object "ERC1155Yul" {
       *  This payload is also to be reused for _update
       * 
       */
-      function prepareOnERC1155ReceivedData(operator,from){
+      function prepareOnERC1155ReceivedData(operator,from, calldataOffset){
         let memStart := getMemoryPointer()
         let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000                                 
         //first put in the func sig      
@@ -568,7 +689,7 @@ object "ERC1155Yul" {
         let extraDataStartPos := safeAdd(idStartPointer,0x40)
         // when we do calldatasize, we get total size
         // then we need to sub totalSize - func sig, address to (32 + 4 bytes)
-        let calldataOffset := 0x24
+        //let calldataOffset := 0x24
         let sizeRequired := sub(calldatasize(),calldataOffset)
         calldatacopy(idStartPointer,calldataOffset,sizeRequired)
         // extra data offset needs to be at 100 all the time
@@ -582,7 +703,7 @@ object "ERC1155Yul" {
       *  This payload is also to be reused for _update
       * 
       */
-      function prepareOnERC1155BatchReceivedData(operator,from, idsLen){
+      function prepareOnERC1155BatchReceivedData(operator,from, idsLen, calldataOffset){
         let memStart := getMemoryPointer()
         let onERC1155BatchReceivedSelector := 0xbc197c8100000000000000000000000000000000000000000000000000000000
         mstore(memStart, onERC1155BatchReceivedSelector)
@@ -598,7 +719,7 @@ object "ERC1155Yul" {
         let idsOffsetStartPointer := getMemoryPointer()
         // when we do calldatasize, we get total size
         // then we need to sub totalSize - func sig, address to (32 + 4 bytes)
-        let calldataOffset := 0x24
+        //let calldataOffset := 0x24
         let sizeRequired := sub(calldatasize(),calldataOffset)
         calldatacopy(idsOffsetStartPointer,calldataOffset,sizeRequired)
 
