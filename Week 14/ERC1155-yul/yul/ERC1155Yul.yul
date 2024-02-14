@@ -452,6 +452,7 @@ object "ERC1155Yul" {
         let approvalMappingInnerKey := getApprovalMappingInnerKey(_owner, _operator)
         sstore(approvalMappingInnerKey,_approved)
         // TODO: Emit approval for all event
+        emitApprovalForAll(_owner, _operator, _approved)
 
       }
       //calldata looks like this
@@ -973,6 +974,20 @@ object "ERC1155Yul" {
           mstore(0,_id)
           mstore(0x20, _value)
           log4(0x00,0x40,signatureHash, _operator,_from,_to)
+        }
+
+        // indexed must be in stack
+        // approved must be in memory
+        // non-indexed must be in memeory
+        function emitApprovalForAll(_owner, _operator, _approved){
+            let signatureHash := 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31
+            mstore(0,_approved)
+            log3(0x00,0x20,signatureHash,_owner,_operator)
+        }
+        //
+        event URI(string _value, uint256 indexed _id);
+        function emitURI(){
+          
         }
 
 
