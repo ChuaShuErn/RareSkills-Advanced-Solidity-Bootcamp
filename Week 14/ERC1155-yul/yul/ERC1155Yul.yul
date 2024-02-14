@@ -227,22 +227,13 @@ object "ERC1155Yul" {
 
       case 0x0e89341c/*function uri(uint256 arg) external returns (string memory)*/ {
             //only owner?
-
+            // let it be for now
+            // if iszero(eq(caller(),getOwner())){
+            //   revert(0,0)
+            // }
             _uri(decodeAsUint(0))
       }
-      //calldata looks like this
-      //
-      // 02fe5305 -> func sig
-      // 0000000000000000000000000000000000000000000000000000000000000020 // string offset
-      // 0000000000000000000000000000000000000000000000000000000000000022 // len in bytes, 34 bytes
-      // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f7b69647d2e6a73 // string in hexadecimal
-      // 6f6e000000000000000000000000000000000000000000000000000000000000
-      // case 0x02fe5305/*function setURI(string uriString) external; */{
-      //   // only owner?
-      //   _setURI(decodeAsUint(0))
-      // }
- 
-      // default case to revert if unidentified selector found
+
       default {
         
         revert(0,0)
@@ -660,7 +651,7 @@ object "ERC1155Yul" {
       // len 32
       // text 32
       //  6
-      //let memSize := safeSubtract(endPointer,0x)
+      
       return (stringOffsetStart,0x66)
 
 
