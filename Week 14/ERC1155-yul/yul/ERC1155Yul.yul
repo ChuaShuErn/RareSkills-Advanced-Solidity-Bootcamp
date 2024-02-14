@@ -3,6 +3,39 @@ object "ERC1155Yul" {
     // store the creator in slot zero.
     sstore(0,caller())
     
+    //Since I know that the we are using slot 3 of URI
+    // URI will be a static string
+    // we will use "https://token-cdn-domain/{id}.json"
+    // how is URI stored in storage in smart contracts?
+    // 1 slot for URI Length 
+    // n/32 bytes slots for hexadecimal representation of string
+
+    // so len will be stored at slot 3
+
+    // depending on len, first part of string will be at 
+    // keccak256(3) +1
+    // second part of string will be
+    // keccak256(3) + 2
+    // so on and so forth
+
+    //Step 1, store byte length of "https://token-cdn-domain/{id}.json" at slot 3
+    // hexadecimal representation 
+    // first part: 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f7b69647d2e6a73
+    // second part: 6f6e
+    // sstore(3, 0x22) // 34 bytes
+    // mstore(0,0x03) // store 3
+    // mstore(0x20,0x20) // store 32 btes
+    // let hash := keccak256(0,0x40)
+    // //first 32 bytes of string as key
+    // // 0000000000000000000000000000000000000000000000000000000000000032
+    // // 6f6e000000000000000000000000000000000000000000000000000000000000
+    // let firstKey := add(hash,0x01)
+    // sstore(firstKey,0x68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f7b69647d2e6a73)
+    // let secondKey := add(hash,0x02)
+    // sstore(secondKey,0x6f6e000000000000000000000000000000000000000000000000000000000000)
+    
+
+    //Step 2 store 32 bytes of first part of string at keccak256(3) + 1
 
     // Deploy the contract
     datacopy(0, dataoffset("Runtime"), datasize("Runtime"))
@@ -19,8 +52,7 @@ object "ERC1155Yul" {
       switch selector()
 
       case 0xf242432a/*function safeTransferFrom(address from, address to, uint256 id, uint256 value, bytes calldata data) external*/{
-        
-        
+      
         //from and to cannot be 0
         let from := decodeAsAddress(0)
         require(from)
@@ -192,6 +224,23 @@ object "ERC1155Yul" {
         //TODO: handle calldaata
         _batchBurn(from,idsLen,idsOffsetAmount,amountsOffsetAmount )
       }
+
+      case 0x0e89341c/*function uri(uint256 arg) external returns (string memory)*/ {
+            //only owner?
+
+            _uri(decodeAsUint(0))
+      }
+      //calldata looks like this
+      //
+      // 02fe5305 -> func sig
+      // 0000000000000000000000000000000000000000000000000000000000000020 // string offset
+      // 0000000000000000000000000000000000000000000000000000000000000022 // len in bytes, 34 bytes
+      // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f7b69647d2e6a73 // string in hexadecimal
+      // 6f6e000000000000000000000000000000000000000000000000000000000000
+      // case 0x02fe5305/*function setURI(string uriString) external; */{
+      //   // only owner?
+      //   _setURI(decodeAsUint(0))
+      // }
  
       // default case to revert if unidentified selector found
       default {
@@ -561,6 +610,76 @@ object "ERC1155Yul" {
         emitTransferBatch(caller(),from,to,idsOffsetAmount,amountsOffsetAmount, idsLen)
      }
 
+      //calldata looks like this
+      // 0e89341c
+      // 0000000000000000000000000000000000000000000000000000000000000005
+
+      //return 0xc0, 192 bytes
+      // 0x60 - 96 bytes
+      // 0xc0:
+      // 0x0000000000000000000000000000000000000000000000000000000000000020 // offset of 32 bytes
+      // 0xe0:    
+      // 0x0000000000000000000000000000000000000000000000000000000000000006 // len of URI
+      // 0x100:
+      // 0xe4b8ade696870000000000000000000000000000000000000000000000000000 // string in hexadecimal representation
+     function _uri(id){
+
+      // lets just return a string
+      let stringOffsetStart := getMemoryPointer()
+      mstore(stringOffsetStart,0x20)
+      incrMemoryPointer()
+
+      // len is 43 bytes
+      let lenMemStart := getMemoryPointer()
+      mstore(lenMemStart,0x26)
+      incrMemoryPointer()
+
+     
+
+      // in this case, we will always return "https://token-cdn-chosen-domain/{id}.json"
+      // if id is 1 return "https://token-cdn-domain/1.json"
+      // if id is 2 return "https://token-cdn-domain/2.json"
+      // if id is 999 return "https://token-cdn-domain/999.json"
+      // get hexadecimal representation of "https://token-cdn-domain/"
+                     //0x0000000000000000000000000000000000000000000000000000000000000032
+      // this is 32bytes 
+      let firstPart := 0x68747470733a2f2f746f6b656e2d63646e2d63686f73656e2d646f6d61696e2f
+                       
+                
+      mstore(getMemoryPointer(),firstPart)
+      incrMemoryPointer()
+
+      let secondPart := deriveSecondPartOfURI(id)
+      mstore(getMemoryPointer(),secondPart)
+      //setMemoryPointer(safeAdd(getMemoryPointer(),0x0a))
+      incrMemoryPointer()
+      
+      let endPointer := getMemoryPointer()
+
+      //offset 32
+      // len 32
+      // text 32
+      //  6
+      //let memSize := safeSubtract(endPointer,0x)
+      return (stringOffsetStart,0x66)
+
+
+     }  
+
+
+     //calldata looks like this
+      //
+      // 02fe5305 -> func sig
+      // 0000000000000000000000000000000000000000000000000000000000000020 // string offset
+      // 0000000000000000000000000000000000000000000000000000000000000022 // len in bytes, 34 bytes
+      // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f7b69647d2e6a73 // string in hexadecimal
+      // 6f6e000000000000000000000000000000000000000000000000000000000000
+    //  function _setURI(stringOffset){
+    //   //string offset is 0x24
+    //   let stringLen := calldataload(stringOffset)
+      
+    //  }
+
       /*
       * to -> receiving contract address
       * argsOffset -> memoryOffset for calldata of subcontext
@@ -577,20 +696,6 @@ object "ERC1155Yul" {
         // retOffset: byte offset in the memory in bytes, where to store the return data of the sub context.
         // retSize: byte size to copy (size of the return data).     
         // getcalldata
-        
-
-        // let's hardcode it
-        //  let funcSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
-        //  let offset := getMemoryPointer()
-        //  mstore(offset, funcSelector)
-        //  mstore(add(offset, 0x04), caller())       // operator
-        //  mstore(add(offset, 0x24), 0x00)           // from
-        //  mstore(add(offset, 0x44), 0x539)             // id
-        //  mstore(add(offset, 0x64), 0x01)         // amount
-        //  mstore(add(offset, 0x84), 0xa0)           // calldata offset
-        //  mstore(add(offset,0xA4),0x00) // 0x calldata
-        //  setMemoryPointer(safeAdd(getMemoryPointer(), 0xC4 ))
-        
         let retOffset := getMemoryPointer()
         let success := call(
               gas(), to, 0, checkArgsOffset, checkArgsSize, retOffset, 0x20
@@ -664,6 +769,32 @@ object "ERC1155Yul" {
 
         let eleOffsetAmount := add(skipBy,offsetAmount)
         ele := calldataload(eleOffsetAmount)
+
+      }
+
+      /*its a table to support id 1 to 5*/
+      function deriveSecondPartOfURI(uint) -> secondPart {
+        
+        if eq(uint,0x01){
+                        
+          secondPart := 0x312e6a736f6e0000000000000000000000000000000000000000000000000000
+        }
+        if eq(uint,0x02){
+                         
+          secondPart := 0x322e6a736f6e0000000000000000000000000000000000000000000000000000
+        }
+        if eq(uint,0x03){
+                           
+           secondPart := 0x332e6a736f6e0000000000000000000000000000000000000000000000000000
+        }
+        if eq(uint,0x04){
+                            
+           secondPart := 0x342e6a736f6e0000000000000000000000000000000000000000000000000000
+        }
+        if eq(uint,0x05) {
+                             
+          secondPart := 0x352e6a736f6e0000000000000000000000000000000000000000000000000000
+        }
 
       }
 
@@ -836,6 +967,10 @@ object "ERC1155Yul" {
         p := 2
       }
 
+      function getURILenPos() -> p {
+        p := 3
+      }
+
       /* ---------- storage access----------- */
 
       function owner() -> owr {
@@ -954,19 +1089,6 @@ object "ERC1155Yul" {
       // - [ ]  **`event** ApprovalForAll(**address** **indexed** _owner, **address** **indexed** _operator, **bool** _approved);`
       // - [ ]  **`event** URI(**string** _value, **uint256** **indexed** _id);`
 
-        //  function emitTransfer(from, to, amount) {
-        //         let signatureHash := 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef
-        //         emitEvent(signatureHash, from, to, amount)
-        //     }
-        //     function emitApproval(from, spender, amount) {
-        //         let signatureHash := 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925
-        //         emitEvent(signatureHash, from, spender, amount)
-        //     }
-        //     function emitEvent(signatureHash, indexed1, indexed2, nonIndexed) {
-        //         mstore(0, nonIndexed)
-        //         log3(0, 0x20, signatureHash, indexed1, indexed2)
-        //     }
-      
         function emitTransferSingle(_operator, _from, _to, _id,_value){
           //keccak256("TransferSingle(address,address,address,uint256,uint256)")
           let signatureHash := 0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62
@@ -978,20 +1100,13 @@ object "ERC1155Yul" {
 
         // indexed must be in stack
         // approved must be in memory
-        // non-indexed must be in memeory
+        // non-indexed must be in memory
         function emitApprovalForAll(_owner, _operator, _approved){
             let signatureHash := 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31
             mstore(0,_approved)
             log3(0x00,0x20,signatureHash,_owner,_operator)
         }
-        //
-        event URI(string _value, uint256 indexed _id);
-        function emitURI(){
-          
-        }
 
-
-          
           /*
           * operator caller()
           * from address
