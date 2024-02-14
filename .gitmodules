@@ -64,3 +64,6 @@
 [submodule "Week 14/ERC1155-yul/lib/solmate"]
 	path = Week 14/ERC1155-yul/lib/solmate
 	url = https://github.com/transmissions11/solmate
+[submodule "Week 14/ERC1155-yul/lib/openzeppelin-contracts"]
+	path = Week 14/ERC1155-yul/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
