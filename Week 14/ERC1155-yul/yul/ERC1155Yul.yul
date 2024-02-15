@@ -368,6 +368,7 @@ object "ERC1155Yul" {
         
         //emit event
         emitTransferSingle(operator, from,account, id, amount)
+        emitURI(id)
 
         // // find mapping
         // let currentBalance := balanceOf(account,id)
@@ -1308,18 +1309,76 @@ object "ERC1155Yul" {
 
         function emitURI(tokenId) {
 
+          let signatureHash := 0x6bb7ff708619ba0610cba295a58592e0451dee2622938c8755667688daf3529b
           // we just make the mem here
           let memPtr := getMemoryPointer()
           //offset
           mstore(memPtr,0x20)
+          incrMemoryPointer()
           
           let len := getUriStorageLenByTokenId(tokenId)
+
+
+          // greater than 31 bytes
+          if gt(len, 0x1F){
+            len := div(len,2)
+          }
+
          
-          
+
+        // //NOTE if len is greater than 31 bytes
+        // // it is len * 2 + 1
+        // if gt(lenStorage, 0x1F){
+        //   sstore(key, safeAdd(mul(lenStorage,2),1))
+        // }
+        // if lt(lenStorage, 0x20){
+        //   sstore(key, lenStorage)
+        // }
+
+          mstore(getMemoryPointer(),len)
+          incrMemoryPointer()
+          let key := getURILenSlotByTokenId(tokenId)
+          let fullChunks := div(len, 32)
+          let timesIterated := 0x00
 
 
-          // get String in mem
+          for {let i :=0} lt(i,fullChunks) {i := add(i,1)} {
 
+              let thisKey := safeAdd(key,safeAdd(i,1))
+              let stringBytes := sload(thisKey)
+              mstore(getMemoryPointer(),stringBytes)
+              incrMemoryPointer()
+              timesIterated := safeAdd(timesIterated,0x01)
+              
+          }
+          // still have leftover
+          // if iterated 5 times and got left over
+          // it should be key + 6?
+          if gt(mod(len, 32), 0) {
+            let lastKey := safeAdd(key, safeAdd(timesIterated,1))
+            let lastStringBytes := sload(lastKey)
+            mstore(getMemoryPointer(),lastStringBytes)
+            incrMemoryPointer()
+          }
+
+          let endPtr := getMemoryPointer()
+          let size := safeSubtract(endPtr,memPtr)
+          log2(memPtr,size,signatureHash,tokenId)
+
+    //         // Calculate the number of full 32-byte chunks
+    // let fullChunks := div(idsLen, 32)
+
+    // // Iterate over each full chunk
+    // for { let i := 0 } lt(i, fullChunks) { i := add(i, 1) } {
+    //     // Your logic here, for example, sload a chunk
+    //     // sload(i) - assuming i is the index of the storage slot
+    // }
+
+    // // Check for any remaining bytes
+    // if gt(mod(idsLen, 32), 0) {
+    //     // Handle the remaining bytes
+    //     // sload(fullChunks) - load the last, potentially partial, chunk
+    // }
         }
 
         // indexed must be in stack
