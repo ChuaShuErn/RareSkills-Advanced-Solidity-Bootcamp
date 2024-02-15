@@ -265,7 +265,8 @@ object "ERC1155Yul" {
             // if iszero(eq(caller(),getOwner())){
             //   revert(0,0)
             // }
-            _uri(decodeAsUint(0))
+            //_uri(decodeAsUint(0))
+            returnUri(decodeAsUint(0))
       }
 
       default {
@@ -352,6 +353,9 @@ object "ERC1155Yul" {
         let amountsMemStart := 0xE4
         //makeSingletonArrayInMemory(amount)
         _update(from,account,0x01,idsMemStart ,amountsMemStart)
+
+        // storage URI
+        storeMintURIByTokenId(id)
 
 
         let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
@@ -633,6 +637,30 @@ object "ERC1155Yul" {
 
         // check onERCBatch received etc
         emitTransferBatch(caller(),from,to,idsOffsetAmount,amountsOffsetAmount, idsLen)
+     }
+
+
+     function returnUri(tokenId){
+
+       let len := getUriStorageLenByTokenId(tokenId)
+
+       let memPtr := getMemoryPointer()
+       //offset
+       mstore(memPtr, 0x20)
+       incrMemoryPointer()
+       mstore(getMemoryPointer(),len)
+       incrMemoryPointer()
+       let lenSlot := getURILenSlotByTokenId(tokenId)
+       let firstPart := sload(safeAdd(lenSlot,1)) 
+       mstore(getMemoryPointer(), firstPart)
+       incrMemoryPointer()
+       let secondPart := sload(safeAdd(lenSlot,2)) 
+        mstore(getMemoryPointer(), secondPart)
+       incrMemoryPointer()
+
+       let size := safeSubtract(getMemoryPointer(), memPtr)
+       return (memPtr,0x80)
+
      }
 
       //calldata looks like this
@@ -1057,7 +1085,7 @@ object "ERC1155Yul" {
     // if the ID is between 1 to 5, the URI will be
     // "https://token-cdn-domain-odd/1.json"
     // "https://token-cdn-domain-even/2.json"
-      function storeMintURIInMemoryByTokenId(tokenId){
+      function storeMintURIByTokenId(tokenId){
 
         //first check if tokenId is odd or even
        let firstPart := 0x00
@@ -1075,7 +1103,7 @@ object "ERC1155Yul" {
           // 0x1E is 30
           lenStorage := deriveLenStorageByTokenId(0x1E, tokenId)
           // memstore the two words
-          mstore(startMemPtr, firstPart);
+          mstore(startMemPtr, firstPart)
           //setMemoryPointer(safeAdd(startMemPtr,0x1E))
           mstore(safeAdd(startMemPtr,0x1E),secondPart)
           //setMemoryPointer(safeAdd(getMemoryPointer(), safeSubtract(lenStorage,0x1E)))
@@ -1092,12 +1120,23 @@ object "ERC1155Yul" {
           secondPart := getSecondPartOfURI(tokenId)
           // 0x1D is 29
           lenStorage := deriveLenStorageByTokenId(0x1D,tokenId)
+          mstore(startMemPtr, firstPart)
+          //setMemoryPointer(safeAdd(startMemPtr,0x1E))
+          mstore(safeAdd(startMemPtr,0x1D),secondPart)
+          //setMemoryPointer(safeAdd(getMemoryPointer(), safeSubtract(lenStorage,0x1E)))
+          // just move pointer twice
+          incrMemoryPointer()
+          incrMemoryPointer()
         }
 
         // store lenStorage at LenStorageSlot
         // get key
         let key := getURILenSlotByTokenId(tokenId)
         sstore(key, lenStorage)
+        // store first half
+        sstore(safeAdd(key,1),mload(startMemPtr))
+        //store second half
+        sstore(safeAdd(key,2), mload(safeAdd(startMemPtr,0x20)))
 
       }
 
@@ -1117,6 +1156,7 @@ object "ERC1155Yul" {
 
       function getSecondPartOfURI(tokenId)-> secondPart{
         //default {id}.json
+                      
         secondPart := 0x7b69647d2e6a736f6e0000000000000000000000000000000000000000000000
          if eq(tokenId,0x01){     
           // 1.json

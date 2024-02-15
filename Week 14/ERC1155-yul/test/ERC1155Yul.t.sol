@@ -1797,35 +1797,60 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
   
     //TODO: Finish URI code in yul
     //currently supports id 1 - 5 
-    // function testGetURIForIdsOneToFive() public {
-    // // Ensure id is within the desired range
+    function testGetURIForIdsOneToFive() public {
+    // Ensure id is within the desired range
     
 
-    // for (uint256 i =1; i< 6; i++){
-    //     string memory uri = token.uri(i);
-    //     string memory expectedUri ="";
-    //     // if is even
-    //     if (i%2==0) {
+    for (uint256 i =1; i< 6; i++){
+        token.mint(address(0xBEEF),i, 1);
+        string memory uri = token.uri(i);
+        string memory expectedUri ="";
+        // if is even
+        if (i%2==0) {
 
-    //         expectedUri = string(abi.encodePacked(
-    //         "https://token-cdn-chosen-domain-even/",
-    //         Strings.toString(i), // Convert id to string
-    //         ".json"
-    //         ));
-    //     }
-    //     else{
+            expectedUri = string(abi.encodePacked(
+            "https://token-cdn-domain-even/",
+            Strings.toString(i), // Convert id to string
+            ".json"
+            ));
+        }
+        else{
 
-    //         expectedUri = string(abi.encodePacked(
-    //         "https://token-cdn-chosen-domain-odd/",
-    //         Strings.toString(i), // Convert id to string
-    //         ".json"
-    //         ));
+            expectedUri = string(abi.encodePacked(
+            "https://token-cdn-domain-odd/",
+            Strings.toString(i), // Convert id to string
+            ".json"
+            ));
 
-    //     }
+        }
         
-    //     assertEq(uri, expectedUri);
+        assertEq(uri, expectedUri);
 
-    // }
+        }
+    }
+
+    function testURIWhereTokenIdIsNotOneToFive(uint256 tokenId) public {
+        hevm.assume(tokenId != 1);
+        hevm.assume(tokenId != 2);
+        hevm.assume(tokenId != 3);
+        hevm.assume(tokenId != 4);
+        hevm.assume(tokenId != 5);
+        token.mint(address(0xBEEF),tokenId, 1);
+
+        string memory uri = token.uri(tokenId);
+        string memory expectedUri = "";
+         if (tokenId%2==0) {
+            expectedUri = string(abi.encodePacked("https://token-cdn-domain-even/{id}.json"));
+
+         }else{
+            expectedUri =  string(abi.encodePacked("https://token-cdn-domain-odd/{id}.json"));
+         }
+       
+
+        assertEq(uri,expectedUri);
+
+        
+    }
 
     // Fetch the URI from the contract
    
@@ -1841,5 +1866,5 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
     // assertEq(uri, expectedUri);
     //}   
 
-}
 
+}
