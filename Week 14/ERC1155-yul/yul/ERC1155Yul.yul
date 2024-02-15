@@ -1047,9 +1047,108 @@ object "ERC1155Yul" {
          len := and(lenSlotWord, 0xff)
       }
 
-      function storeURIInMemoryByTokenId(){
+      // whenever a token is minted
+      // we will store a uri with this function
+      // @params tokenId
+      // this function will update mapping uint id -> string
+      // "https://token-cdn-domain-even/{id}.json"
+    // if the ID is odd, the URI will be 
+    // "https://token-cdn-domain-odd/{id}.json"
+    // if the ID is between 1 to 5, the URI will be
+    // "https://token-cdn-domain-odd/1.json"
+    // "https://token-cdn-domain-even/2.json"
+      function storeMintURIInMemoryByTokenId(tokenId){
+
+        //first check if tokenId is odd or even
+       let firstPart := 0x00
+       let secondPart := 0x00
+       let lenStorage := 0x00
+       let startMemPtr := getMemoryPointer()
+        // is even
+        if iszero(mod(tokenId,2)) {
+          //let first part of string https://token-cdn-domain-even/
+          // first 32 bytes, but move pointer by 30 bytes
+          firstPart := 0x68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2d6576656e2f0000
+          // getsecond part if tokenId is 1 to 5 , then return hexadecimal string of 1 to 5
+          secondPart := getSecondPartOfURI(tokenId)
+          // now we need to get the len in bytes
+          // 0x1E is 30
+          lenStorage := deriveLenStorageByTokenId(0x1E, tokenId)
+          // memstore the two words
+          mstore(startMemPtr, firstPart);
+          //setMemoryPointer(safeAdd(startMemPtr,0x1E))
+          mstore(safeAdd(startMemPtr,0x1E),secondPart)
+          //setMemoryPointer(safeAdd(getMemoryPointer(), safeSubtract(lenStorage,0x1E)))
+          // just move pointer twice
+          incrMemoryPointer()
+          incrMemoryPointer()
+
+        }
+        //if odd
+        if gt(mod(tokenId,2),0){
+          // https://token-cdn-domain-odd/
+          // move pointer by 29 bytes
+          firstPart := 0x68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2d6f64642f000000
+          secondPart := getSecondPartOfURI(tokenId)
+          // 0x1D is 29
+          lenStorage := deriveLenStorageByTokenId(0x1D,tokenId)
+        }
+
+        // store lenStorage at LenStorageSlot
+        // get key
+        let key := getURILenSlotByTokenId(tokenId)
+        sstore(key, lenStorage)
 
       }
+
+      function deriveLenStorageByTokenId(firstPartLen, tokenId) -> val {
+        // it is first part len 
+         // if tokenId is 1-5 , we add 6 bytes
+         // if token id is 1-5
+         if and(gt(tokenId, 0), lt(tokenId, 6)){
+           val := safeAdd(firstPartLen,0x06)
+         }
+
+         if or(eq(tokenId, 0), gt(tokenId, 5)) {
+         // if its not, we add 9 bytes
+            val := safeAdd(firstPartLen,0x09)
+          }
+      }
+
+      function getSecondPartOfURI(tokenId)-> secondPart{
+        //default {id}.json
+        secondPart := 0x7b69647d2e6a736f6e0000000000000000000000000000000000000000000000
+         if eq(tokenId,0x01){     
+          // 1.json
+          //312e6a736f6e        
+          secondPart := 0x312e6a736f6e0000000000000000000000000000000000000000000000000000
+          }
+        if eq(tokenId,0x02){
+          //2.json 
+          //322e6a736f6e        
+          secondPart := 0x322e6a736f6e0000000000000000000000000000000000000000000000000000
+          }
+        if eq(tokenId,0x03){
+          //3.json
+          //332e6a736f6e                 
+           secondPart := 0x332e6a736f6e0000000000000000000000000000000000000000000000000000
+        }
+        if eq(tokenId,0x04){
+           //4.json
+           //342e6a736f6e                
+           secondPart := 0x342e6a736f6e0000000000000000000000000000000000000000000000000000
+        }
+        if eq(tokenId,0x05) {
+          //5.json
+          //352e6a736f6e                   
+          secondPart := 0x352e6a736f6e0000000000000000000000000000000000000000000000000000
+        }
+
+
+
+      }
+
+     
 
       function getBalanceOuterMappingKey(id) -> outerKey {
 
