@@ -2,76 +2,6 @@ object "ERC1155Yul" {
   code {
     // store the creator in slot zero.
     sstore(0,caller())
-    
-
-    // In ERC1155, foreach token ID, we can have a different URI
-    // For example, for token id 1, the URI could be 
-    // "https://token-cdn-domain/1.json"
-    // for token id 2, the uri could be 
-    // "https://token-cdn-domain/2.json"
-
-    // ok mapping of uint256 id => string 
-    // for simplicity's sake 
-    // if the ID is even, the URI will be 
-    // "https://token-cdn-domain-even/{id}.json"
-    // if the ID is odd, the URI will be 
-    // "https://token-cdn-domain-odd/{id}.json"
-    // if the ID is between 1 to 5, the URI will be
-    // "https://token-cdn-domain-odd/1.json"
-    // "https://token-cdn-domain-even/2.json"
-    // "https://token-cdn-domain-odd/3.json"
-    // "https://token-cdn-domain-even/4.json"
-    // "https://token-cdn-domain-odd/5.json"
-    
-
-    // ok so what is the flow
-    // when token mint
-    // check id
-    // if id is 1-5
-    // store string 
-
-
-    // we need a mapping
-    // uint256 id => string uri
-
-
-
-
-    // Since I know that the we are using slot 3 of URI
-    // URI will be a static string
-    // we will use "https://token-cdn-domain/{id}.json"
-    // how is URI stored in storage in smart contracts?
-    // 1 slot for URI Length 
-    // n/32 bytes slots for hexadecimal representation of string
-
-    // so len will be stored at slot 3
-
-    // depending on len, first part of string will be at 
-    // keccak256(3) +1
-    // second part of string will be
-    // keccak256(3) + 2
-    // so on and so forth
-
-    //Step 1, store byte length of "https://token-cdn-domain/{id}.json" at slot 3
-    // hexadecimal representation 
-    // first part: 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f7b69647d2e6a73
-    // second part: 6f6e
-    // sstore(3, 0x22) // 34 bytes
-    // mstore(0,0x03) // store 3
-    // mstore(0x20,0x20) // store 32 btes
-    // let hash := keccak256(0,0x40)
-    // //first 32 bytes of string as key
-    // // 0000000000000000000000000000000000000000000000000000000000000032
-    // // 6f6e000000000000000000000000000000000000000000000000000000000000
-    // let firstKey := add(hash,0x01)
-    // sstore(firstKey,0x68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f7b69647d2e6a73)
-    // let secondKey := add(hash,0x02)
-    // sstore(secondKey,0x6f6e000000000000000000000000000000000000000000000000000000000000)
-    
-
-    //Step 2 store 32 bytes of first part of string at keccak256(3) + 1
-
-    // Deploy the contract
     datacopy(0, dataoffset("Runtime"), datasize("Runtime"))
     return(0, datasize("Runtime"))
   }
@@ -161,10 +91,7 @@ object "ERC1155Yul" {
       }
 
       case 0x156e29f6 /* "function mint(address,uint256,uint256)" */{
-        // TODO: put in bytes extra data
-        // Let's check if 0x00 serves its purpose as 0 bytes extradata
-        // mint(decodeAsAddress(0),decodeAsUint(1), decodeAsUint(2), 0x00 )
-        // returnTrue()
+       
         let to := decodeAsAddress(0)
         // to cannot be address 0
         require(to)
@@ -182,10 +109,9 @@ object "ERC1155Yul" {
         )
        
       
-        // check if to is a ERC1155 Receiver
+       
       }
-      //0x0ca83480 -> this one with calldata
-      //
+     
       case 0x0ca83480 /*"function batchMint(address to, uint256[] calldata id, uint256[] calldata amounts)"*/{
         let to := decodeAsAddress(0)
         // to cannot be address 0
@@ -260,12 +186,7 @@ object "ERC1155Yul" {
       }
 
       case 0x0e89341c/*function uri(uint256 arg) external returns (string memory)*/ {
-            //only owner?
-            // let it be for now
-            // if iszero(eq(caller(),getOwner())){
-            //   revert(0,0)
-            // }
-            //_uri(decodeAsUint(0))
+  
             returnUri(decodeAsUint(0))
       }
 
@@ -370,14 +291,7 @@ object "ERC1155Yul" {
         emitTransferSingle(operator, from,account, id, amount)
         emitURI(id)
 
-        // // find mapping
-        // let currentBalance := balanceOf(account,id)
-        // let currentBalance := balanceOf(account,id)
-        // let newAmount := safeAdd(amount,currentBalance)
-        // // store newAmount to account mapping for this id
-        // let innerKey := getBalanceInnerMappingKey(account,id)
-        // sstore(innerKey,newAmount)
-        
+
         
       }
         /*
@@ -413,29 +327,14 @@ object "ERC1155Yul" {
         // skip 1 word + mul(0x20,idsLen)
         let amountsMemStart := safeAdd(safeAdd(idsMemStart,0x20),mul(0x20,idsLen))
         
-
-        // mstore(getMemoryPointer(),0x20)
-        //  incrMemoryPointer()
-        //  copyCalldataArrayIntoMemory(ids)
-        
-        // // prepare amounts offset
-        // let amountsStart := getMemoryPointer()
-        // mstore(getMemoryPointer(), 0x20)
-        // incrMemoryPointer()
-        // copyCalldataArrayIntoMemory(amounts)
         _update(from, to,idsLen, idsMemStart,amountsMemStart)
-
-        // Check if to address is EOA
-
         
        if isContract(to) {
      
           _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize,onERC1155BatchReceivedSelector)
         
        }
-        //prepare 
-
-        // check onERCBatch received etc
+  
         emitTransferBatch(caller(),from,to,ids,amounts, idsLen)
       }
 
@@ -495,19 +394,7 @@ object "ERC1155Yul" {
       */
       function _update(from,to,len, ids,amounts) {
 
-        //let operator := caller() 
-        //return (ids,0x20) will return the len
-        //let idsLen := mload(ids) // 1
-        //let idsValue := mload(safeAdd(ids,0x20))
-        // amounts Len // 2
-        // amountslen gives me ID
-        // let amountsLen := mload(amounts)
-        // let amountsEle := mload(safeAdd(amounts,0x20))
 
-
-        // do a forloop to updateBalances
-        // inside for loop if from is 0 , its mint, dont upodate bal
-        // if to is 0, its burn, dont update address 0 bal
          for {let i :=0} lt(i,len) {i := add(i,1)} {
 
 
@@ -617,29 +504,13 @@ object "ERC1155Yul" {
         // skip 1 word + mul(0x20,idsLen)
         let amountsMemStart := safeAdd(safeAdd(idsMemStart,0x20),mul(0x20,idsLen))
         
-
-        // mstore(getMemoryPointer(),0x20)
-        //  incrMemoryPointer()
-        //  copyCalldataArrayIntoMemory(ids)
-        
-        // // prepare amounts offset
-        // let amountsStart := getMemoryPointer()
-        // mstore(getMemoryPointer(), 0x20)
-        // incrMemoryPointer()
-        // copyCalldataArrayIntoMemory(amounts)
         _update(from, to,idsLen, idsMemStart,amountsMemStart)
 
-        // Check if to address is EOA
-
-        
        if isContract(to) {
      
           _doSafeTransferAcceptanceCheck(to, checkArgsOffset, checkArgsSize,onERC1155BatchReceivedSelector)
         
        }
-        //prepare 
-
-        // check onERCBatch received etc
         emitTransferBatch(caller(),from,to,idsOffsetAmount,amountsOffsetAmount, idsLen)
      }
 
@@ -729,17 +600,11 @@ object "ERC1155Yul" {
 
 
      //calldata looks like this
-      //
       // 02fe5305 -> func sig
       // 0000000000000000000000000000000000000000000000000000000000000020 // string offset
       // 0000000000000000000000000000000000000000000000000000000000000022 // len in bytes, 34 bytes
       // 68747470733a2f2f746f6b656e2d63646e2d646f6d61696e2f7b69647d2e6a73 // string in hexadecimal
       // 6f6e000000000000000000000000000000000000000000000000000000000000
-    //  function _setURI(stringOffset){
-    //   //string offset is 0x24
-    //   let stringLen := calldataload(stringOffset)
-      
-    //  }
 
       /*
       * to -> receiving contract address
@@ -1058,12 +923,6 @@ object "ERC1155Yul" {
         isApproved := sload(innerKey)
       }
 
-
-      // ok let's write out the mapping thing
-      // string is like dynamic array
-      // keccak256(id + pos) -> lenSlot
-      // then depending on the len, the string can be stored
-      // at lenslot + 1 so on and so forth
       function getURILenSlotByTokenId(tokenId) -> uriLenSlot {
         let uriPos := getURIMappingPos()
         mstore(0, tokenId)
@@ -1364,21 +1223,6 @@ object "ERC1155Yul" {
           let endPtr := getMemoryPointer()
           let size := safeSubtract(endPtr,memPtr)
           log2(memPtr,size,signatureHash,tokenId)
-
-    //         // Calculate the number of full 32-byte chunks
-    // let fullChunks := div(idsLen, 32)
-
-    // // Iterate over each full chunk
-    // for { let i := 0 } lt(i, fullChunks) { i := add(i, 1) } {
-    //     // Your logic here, for example, sload a chunk
-    //     // sload(i) - assuming i is the index of the storage slot
-    // }
-
-    // // Check for any remaining bytes
-    // if gt(mod(idsLen, 32), 0) {
-    //     // Handle the remaining bytes
-    //     // sload(fullChunks) - load the last, potentially partial, chunk
-    // }
         }
 
         // indexed must be in stack
