@@ -3,7 +3,41 @@ object "ERC1155Yul" {
     // store the creator in slot zero.
     sstore(0,caller())
     
-    //Since I know that the we are using slot 3 of URI
+
+    // In ERC1155, foreach token ID, we can have a different URI
+    // For example, for token id 1, the URI could be 
+    // "https://token-cdn-domain/1.json"
+    // for token id 2, the uri could be 
+    // "https://token-cdn-domain/2.json"
+
+    // ok mapping of uint256 id => string 
+    // for simplicity's sake 
+    // if the ID is even, the URI will be 
+    // "https://token-cdn-domain-even/{id}.json"
+    // if the ID is odd, the URI will be 
+    // "https://token-cdn-domain-odd/{id}.json"
+    // if the ID is between 1 to 5, the URI will be
+    // "https://token-cdn-domain-odd/1.json"
+    // "https://token-cdn-domain-even/2.json"
+    // "https://token-cdn-domain-odd/3.json"
+    // "https://token-cdn-domain-even/4.json"
+    // "https://token-cdn-domain-odd/5.json"
+    
+
+    // ok so what is the flow
+    // when token mint
+    // check id
+    // if id is 1-5
+    // store string 
+
+
+    // we need a mapping
+    // uint256 id => string uri
+
+
+
+
+    // Since I know that the we are using slot 3 of URI
     // URI will be a static string
     // we will use "https://token-cdn-domain/{id}.json"
     // how is URI stored in storage in smart contracts?
@@ -958,7 +992,7 @@ object "ERC1155Yul" {
         p := 2
       }
 
-      function getURILenPos() -> p {
+      function getURIMappingPos() -> p {
         p := 3
       }
 
@@ -986,6 +1020,35 @@ object "ERC1155Yul" {
       function getIsApprovedForAll(_owner,_operator) -> isApproved {
         let innerKey := getApprovalMappingInnerKey(_owner,_operator)
         isApproved := sload(innerKey)
+      }
+
+
+      // ok let's write out the mapping thing
+      // string is like dynamic array
+      // keccak256(id + pos) -> lenSlot
+      // then depending on the len, the string can be stored
+      // at lenslot + 1 so on and so forth
+      function getURILenSlotByTokenId(tokenId) -> uriLenSlot {
+        let uriPos := getURIMappingPos()
+        mstore(0, tokenId)
+        mstore(0x20, uriPos)
+        uriLenSlot := keccak256(0,0x40)
+      }
+
+      //Storage Len is defined as bytesize of length 
+      // and if its more than 31 bytes its byteSize + 1
+      function getUriStorageLenByTokenId(tokenId) -> len{
+
+        let lenSlot := getURILenSlotByTokenId(tokenId)
+        let lenSlotWord := sload(lenSlot)
+        // figure out where the len is stored in remix
+        // get the last 1 byte
+        // len is last byte
+         len := and(lenSlotWord, 0xff)
+      }
+
+      function storeURIInMemoryByTokenId(){
+
       }
 
       function getBalanceOuterMappingKey(id) -> outerKey {
