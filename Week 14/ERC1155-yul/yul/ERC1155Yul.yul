@@ -355,7 +355,10 @@ object "ERC1155Yul" {
         _update(from,account,0x01,idsMemStart ,amountsMemStart)
 
         // storage URI
+        //let startOfMemURIString := getMemoryPointer()
+
         storeMintURIByTokenId(id)
+        // mem at this point looks like
 
 
         let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
@@ -643,6 +646,10 @@ object "ERC1155Yul" {
      function returnUri(tokenId){
 
        let len := getUriStorageLenByTokenId(tokenId)
+
+       if gt(len, 0x1F){
+          len := div(len,2)
+       }
 
        let memPtr := getMemoryPointer()
        //offset
@@ -1132,7 +1139,15 @@ object "ERC1155Yul" {
         // store lenStorage at LenStorageSlot
         // get key
         let key := getURILenSlotByTokenId(tokenId)
-        sstore(key, lenStorage)
+
+        //NOTE if len is greater than 31 bytes
+        // it is len * 2 + 1
+        if gt(lenStorage, 0x1F){
+          sstore(key, safeAdd(mul(lenStorage,2),1))
+        }
+        if lt(lenStorage, 0x20){
+          sstore(key, lenStorage)
+        }
         // store first half
         sstore(safeAdd(key,1),mload(startMemPtr))
         //store second half
@@ -1289,6 +1304,22 @@ object "ERC1155Yul" {
           mstore(0,_id)
           mstore(0x20, _value)
           log4(0x00,0x40,signatureHash, _operator,_from,_to)
+        }
+
+        function emitURI(tokenId) {
+
+          // we just make the mem here
+          let memPtr := getMemoryPointer()
+          //offset
+          mstore(memPtr,0x20)
+          
+          let len := getUriStorageLenByTokenId(tokenId)
+         
+          
+
+
+          // get String in mem
+
         }
 
         // indexed must be in stack
