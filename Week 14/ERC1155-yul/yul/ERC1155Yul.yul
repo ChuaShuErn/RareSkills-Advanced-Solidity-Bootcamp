@@ -1275,13 +1275,16 @@ object "ERC1155Yul" {
           mstore(getMemoryPointer(),len)
           incrMemoryPointer()
           let key := getURILenSlotByTokenId(tokenId)
+          // use scratch space to get keccak of key
+          mstore(0, key)
+          let keccakOfKey := keccak256(0,0x20)
           let fullChunks := div(len, 32)
           let timesIterated := 0x00
 
 
           for {let i :=0} lt(i,fullChunks) {i := add(i,1)} {
 
-              let thisKey := safeAdd(key,safeAdd(i,1))
+              let thisKey := safeAdd(i,keccakOfKey)
               let stringBytes := sload(thisKey)
               mstore(getMemoryPointer(),stringBytes)
               incrMemoryPointer()
@@ -1292,7 +1295,7 @@ object "ERC1155Yul" {
           // if iterated 5 times and got left over
           // it should be key + 6?
           if gt(mod(len, 32), 0) {
-            let lastKey := safeAdd(key, safeAdd(timesIterated,1))
+            let lastKey := safeAdd(keccakOfKey,timesIterated)
             let lastStringBytes := sload(lastKey)
             mstore(getMemoryPointer(),lastStringBytes)
             incrMemoryPointer()
