@@ -131,4 +131,5 @@ interface IERC1155 is IERC165 {
 
     
     function uri(uint256 id) external returns (string memory);
+    function setURI(string memory newUri, uint256 tokenId) external;
 }

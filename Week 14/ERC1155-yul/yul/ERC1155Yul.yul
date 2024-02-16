@@ -189,6 +189,27 @@ object "ERC1155Yul" {
   
             returnUri(decodeAsUint(0))
       }
+      // when input is just string "uri"
+      // calldata looks like this:
+      // 02fe5305
+      // 0000000000000000000000000000000000000000000000000000000000000020 offset
+      // 0000000000000000000000000000000000000000000000000000000000000003 len in bytes
+      // 7572690000000000000000000000000000000000000000000000000000000000 string
+
+      // when string is super long ... lorem ipsum
+      // calldata looks like this 
+      // 02fe5305
+      // 0000000000000000000000000000000000000000000000000000000000000020 offset
+      // 000000000000000000000000000000000000000000000000000000000000007a - len 122
+      // 4c6f72656d20697073756d20646f6c6f722073697420616d65742c20636f6e73 -> 32 bytes string
+      // 656374657475722061646970697363696e6720656c69742c2073656420646f20 -> 32 bytes string
+      // 656975736d6f642074656d706f7220696e6369646964756e74207574206c6162 -> 32 bytes string
+      // 6f726520657420646f6c6f7265206d61676e6120616c69717561000000000000 -> 26 bytes string
+      case 0x67db3b8f /*function setURI(string memory newUri, uint256 id) external*/{
+
+        let stringLen := decodeAsUint(1)
+        _setURI(stringLen)
+      }
 
       default {
         
@@ -279,8 +300,6 @@ object "ERC1155Yul" {
         //let startOfMemURIString := getMemoryPointer()
 
         storeMintURIByTokenId(id)
-        // mem at this point looks like
-
 
         let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
         if isContract(account){
@@ -336,6 +355,14 @@ object "ERC1155Yul" {
        }
   
         emitTransferBatch(caller(),from,to,ids,amounts, idsLen)
+
+        // emit URI for each ID
+          for {let i :=0} lt(i,idsLen) {i := add(i,1)} {
+            let thisTokenId := mload(safeAdd(idsMemStart,mul(i,0x20)))
+            storeMintURIByTokenId(thisTokenId)
+            emitURI(thisTokenId)
+
+          }
       }
 
 
@@ -530,16 +557,59 @@ object "ERC1155Yul" {
        mstore(getMemoryPointer(),len)
        incrMemoryPointer()
        let lenSlot := getURILenSlotByTokenId(tokenId)
-       let firstPart := sload(safeAdd(lenSlot,1)) 
+       mstore(0, lenSlot)
+       // get keccak of lenSlot
+       // use 0x00 scratch space
+       let keccakOfKey  := keccak256(0, 0x20)
+       let firstPart := sload(keccakOfKey) 
        mstore(getMemoryPointer(), firstPart)
        incrMemoryPointer()
-       let secondPart := sload(safeAdd(lenSlot,2)) 
+       let secondPart := sload(safeAdd(keccakOfKey,1)) 
         mstore(getMemoryPointer(), secondPart)
        incrMemoryPointer()
 
        let size := safeSubtract(getMemoryPointer(), memPtr)
        return (memPtr,0x80)
 
+     }
+
+      // when input is just string "uri"
+      // calldata looks like this:
+      // 02fe5305
+      // 0000000000000000000000000000000000000000000000000000000000000020 offset
+      // 0000000000000000000000000000000000000000000000000000000000000003 len in bytes
+      // 7572690000000000000000000000000000000000000000000000000000000000 string
+
+      // when string is super long ... lorem ipsum
+      // calldata looks like this 
+      // 02fe5305
+      // 0000000000000000000000000000000000000000000000000000000000000020 offset
+      // 000000000000000000000000000000000000000000000000000000000000007a - len 122
+      // 4c6f72656d20697073756d20646f6c6f722073697420616d65742c20636f6e73 -> 32 bytes string
+      // 656374657475722061646970697363696e6720656c69742c2073656420646f20 -> 32 bytes string
+      // 656975736d6f642074656d706f7220696e6369646964756e74207574206c6162 -> 32 bytes string
+      // 6f726520657420646f6c6f7265206d61676e6120616c69717561000000000000 -> 26 bytes string
+
+      // if string is empty string "", it just gives 0 at len
+     function _setURI(stringLenInBytes){
+
+        //if len is greater than 31 bytes, we need to mul it
+        let len := stringLenInBytes
+        
+        let shouldBeInLenSlot := 0x01
+        // if len is gt than 31 bytes
+        if gt(len,0x1f){
+          // shouldBeInLenSlot set to false
+          shouldBeInLenSlot := 0x00
+          // set len to 2x + 1
+          len := safeAdd(mul(len,2),1)
+        }
+        
+       // if the string len is 31 bytes or less, store the string len in the same 
+       // in the len slot
+       
+
+       // if the string len is 32bytes or more, have it in a separate slot
      }
 
       //calldata looks like this
@@ -932,6 +1002,7 @@ object "ERC1155Yul" {
 
       //Storage Len is defined as bytesize of length 
       // and if its more than 31 bytes its byteSize + 1
+      // but we know for sure that the length will always be greater than 31 bytes
       function getUriStorageLenByTokenId(tokenId) -> len{
 
         let lenSlot := getURILenSlotByTokenId(tokenId)
@@ -1009,9 +1080,16 @@ object "ERC1155Yul" {
           sstore(key, lenStorage)
         }
         // store first half
-        sstore(safeAdd(key,1),mload(startMemPtr))
+        // keccak of key + 0
+        // kecakk of key + 1
+        let keccakPtr := getMemoryPointer()
+        mstore (keccakPtr, key)
+
+        let keccakOfKey := keccak256(keccakPtr,0x20
+        )
+        sstore(keccakOfKey,mload(startMemPtr))
         //store second half
-        sstore(safeAdd(key,2), mload(safeAdd(startMemPtr,0x20)))
+        sstore(safeAdd(keccakOfKey,1), mload(safeAdd(startMemPtr,0x20)))
 
       }
 
