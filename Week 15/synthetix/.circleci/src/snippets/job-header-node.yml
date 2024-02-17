@@ -1,0 +1,3 @@
+working_directory: ~/repo
+docker:
+  - image: synthetixio/docker-node:16.17-ubuntu

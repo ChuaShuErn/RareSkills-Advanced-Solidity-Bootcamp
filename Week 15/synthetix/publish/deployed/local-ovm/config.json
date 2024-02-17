@@ -1,0 +1,257 @@
+{
+	"SystemSettings": {
+		"deploy": true
+	},
+	"AddressResolver": {
+		"deploy": true
+	},
+	"ReadProxyAddressResolver": {
+		"deploy": true
+	},
+	"DebtCache": {
+		"deploy": true
+	},
+	"Depot": {
+		"deploy": true
+	},
+	"TradingRewards": {
+		"deploy": true
+	},
+	"EscrowChecker": {
+		"deploy": true
+	},
+	"ExchangeRates": {
+		"deploy": true
+	},
+	"CircuitBreaker": {
+		"deploy": true
+	},
+	"ExchangeCircuitBreaker": {
+		"deploy": true
+	},
+	"Exchanger": {
+		"deploy": true
+	},
+	"ExchangeState": {
+		"deploy": true
+	},
+	"FeePool": {
+		"deploy": true
+	},
+	"FeePoolEternalStorage": {
+		"deploy": true
+	},
+	"FlexibleStorage": {
+		"deploy": true
+	},
+	"DelegateApprovals": {
+		"deploy": true
+	},
+	"DelegateApprovalsEternalStorage": {
+		"deploy": true
+	},
+	"Issuer": {
+		"deploy": true
+	},
+	"Liquidator": {
+		"deploy": true
+	},
+	"LiquidatorRewards": {
+		"deploy": true
+	},
+	"Synthetix": {
+		"deploy": true
+	},
+	"SynthetixEscrow": {
+		"deploy": true
+	},
+	"RewardEscrow": {
+		"deploy": true
+	},
+	"RewardEscrowV2": {
+		"deploy": true
+	},
+	"RewardEscrowV2Storage": {
+		"deploy": true
+	},
+	"RewardEscrowV2Frozen": {
+		"deploy": true
+	},
+	"RewardsDistribution": {
+		"deploy": true
+	},
+	"SynthetixDebtShare": {
+		"deploy": true
+	},
+	"SystemStatus": {
+		"deploy": true
+	},
+	"SynthUtil": {
+		"deploy": true
+	},
+	"DappMaintenance": {
+		"deploy": true
+	},
+	"SynthsUSD": {
+		"deploy": true
+	},
+	"ProxyFeePool": {
+		"deploy": true
+	},
+	"ProxySynthetix": {
+		"deploy": true
+	},
+	"ProxysUSD": {
+		"deploy": true
+	},
+	"SafeDecimalMath": {
+		"deploy": true
+	},
+	"Math": {
+		"deploy": true
+	},
+	"TokenStateSynthetix": {
+		"deploy": true
+	},
+	"TokenStatesUSD": {
+		"deploy": true
+	},
+	"TokenStatesBTC": {
+		"deploy": true
+	},
+	"ProxysBTC": {
+		"deploy": true
+	},
+	"SynthsBTC": {
+		"deploy": true
+	},
+	"TokenStatesETH": {
+		"deploy": true
+	},
+	"ProxysETH": {
+		"deploy": true
+	},
+	"SynthsETH": {
+		"deploy": true
+	},
+	"TokenStatesLINK": {
+		"deploy": true
+	},
+	"ProxysLINK": {
+		"deploy": true
+	},
+	"SynthsLINK": {
+		"deploy": true
+	},
+	"TokenStatesETHBTC": {
+		"deploy": true
+	},
+	"ProxysETHBTC": {
+		"deploy": true
+	},
+	"SynthsETHBTC": {
+		"deploy": true
+	},
+	"SynthetixBridgeToBase": {
+		"deploy": true
+	},
+	"CollateralUtil": {
+		"deploy": true
+	},
+	"CollateralManager": {
+		"deploy": true
+	},
+	"CollateralManagerState": {
+		"deploy": true
+	},
+	"CollateralShort": {
+		"deploy": true
+	},
+	"EtherWrapper": {
+		"deploy": true
+	},
+	"FuturesMarketBTC": {
+		"deploy": true
+	},
+	"FuturesMarketETH": {
+		"deploy": true
+	},
+	"FuturesMarketManager": {
+		"deploy": true
+	},
+	"FuturesMarketSettings": {
+		"deploy": true
+	},
+	"FuturesMarketData": {
+		"deploy": true
+	},
+	"PerpsV2ProxyBTC": {
+		"deploy": true
+	},
+	"PerpsV2MarketStateBTC": {
+		"deploy": true
+	},
+	"PerpsV2MarketBTC": {
+		"deploy": true
+	},
+	"PerpsV2MarketViewsBTC": {
+		"deploy": true
+	},
+	"PerpsV2MarketNextPriceOrdersBTC": {
+		"deploy": true
+	},
+	"PerpsV2ProxyETH": {
+		"deploy": true
+	},
+	"PerpsV2MarketStateETH": {
+		"deploy": true
+	},
+	"PerpsV2MarketETH": {
+		"deploy": true
+	},
+	"PerpsV2MarketViewsETH": {
+		"deploy": true
+	},
+	"PerpsV2MarketNextPriceOrdersETH": {
+		"deploy": true
+	},
+	"PerpsV2MarketSettings": {
+		"deploy": true
+	},
+	"PerpsV2MarketData": {
+		"deploy": true
+	},
+	"PerpsV2ExchangeRate": {
+		"deploy": true
+	},
+	"WrapperFactory": {
+		"deploy": true
+	},
+	"WETH": {
+		"deploy": true
+	},
+	"OwnerRelayOnOptimism": {
+		"deploy": true
+	},
+	"SynthRedeemer": {
+		"deploy": true
+	},
+	"OneNetAggregatorIssuedSynths": {
+		"deploy": true
+	},
+	"OneNetAggregatorDebtRatio": {
+		"deploy": true
+	},
+	"SystemSettingsLib": {
+		"deploy": true
+	},
+	"ExchangeSettlementLib": {
+		"deploy": true
+	},
+	"DirectIntegrationManager": {
+		"deploy": true
+	},
+	"DebtMigratorOnOptimism": {
+		"deploy": true
+	}
+}

@@ -1,0 +1,17 @@
+# Runs all static analysis checks
+{{> job-header-node.yml}}
+steps:
+  - checkout
+  - attach_workspace:
+      at: .
+  - run:
+      name: Show Slither output
+      # ignore slither error codes
+      command: |
+        set +e
+        slither . --disable-color 2>&1 | tee slitherReport.txt
+        exit 0
+  - store_artifacts:
+      path: slitherReport.txt
+      destination: slitherReport.txt
+  

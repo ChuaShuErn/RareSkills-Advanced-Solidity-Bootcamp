@@ -1,0 +1,100 @@
+# Starts optimism-integration L1 and L2 local chains and runs Optimism integration tests against them
+# TODO: The Optimism ops tool is currently unstable, thue the commented out code below.
+{{> job-header-machine.yml}}
+# set custom delimiter to avoid checksum parsing
+{{=<% %>=}}
+resource_class: large
+steps:
+  # get foundry
+  - restore_cache:
+      keys:
+        - foundry-bin-latest-${foundry_cache_version}
+  - rust/install: {}
+  - run:
+      name: "Run IPFS"
+      working_directory: ~/
+      environment:
+        SHELL: /bin/bash
+      command: |-
+        wget https://dist.ipfs.io/go-ipfs/v0.9.0/go-ipfs_v0.9.0_linux-amd64.tar.gz
+        tar -xvzf go-ipfs_v0.9.0_linux-amd64.tar.gz
+        sudo bash go-ipfs/install.sh
+        ipfs init
+        ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8087
+        ipfs daemon
+      background: true
+  - cmd-wait-for-port:
+      port: 5001
+  - run:
+      command: |-
+        ipfs --version
+  - run: 
+        name: "Install Foundry"
+        working_directory: ~/
+        environment:
+          SHELL: /bin/bash
+        command: |-
+            export PATH="$PATH:$HOME/.foundry/bin"
+            echo 'export PATH=$PATH:$HOME/.foundry/bin' >> $BASH_ENV
+
+            if command -v anvil; then
+              echo "Anvil already installed"
+              anvil --version
+            else
+              curl -L https://foundry.paradigm.xyz | bash
+              foundryup
+            fi
+            rm -rf *
+
+  - save_cache:
+      key: foundry-bin-latest-${foundry_cache_version}
+      paths:
+        - ~/.foundry/bin
+
+  - checkout
+  - attach_workspace:
+      at: .
+  - restore_cache:
+      keys:
+        - v6-optimism-build-{{ checksum "package-lock.json" }}
+  - run:
+      name: Build docker containers if necessary
+      command: |
+        if [ ! -d ./optimism ]; then
+          npx hardhat ops --fresh --build --build-ops
+        fi;
+  - save_cache:
+      key: v6-optimism-build-{{ checksum "package-lock.json" }}
+      paths:
+        - ./optimism
+  - run:
+      name: Build cannonfiles
+      command: |
+        npx hardhat --network cannon cannon:build cannonfile.aggregator.toml
+        npx hardhat --network cannon cannon:build
+  - run:
+      name: Start docker chains
+      background: true
+      command: |
+        docker --version
+        npx hardhat ops --start
+  - cmd-wait-for-port:
+      port: 8545
+  - cmd-wait-for-port:
+      port: 9545
+  - run:
+      name: Run isolated layer 1 integration tests
+      command: |
+        npx hardhat --network localhost test:integration:l1 --deploy --provider-port 9545
+  - run:
+      name: Run isolated layer 2 integration tests
+      command: |
+        npx hardhat --network localhost test:integration:l2 --deploy --provider-port 9545
+  - run:
+      name: Run dual layer 1 and layer 2 integration tests
+      command: |
+        npx hardhat --network localhost test:integration:dual --deploy
+  - store_test_results:
+      path: /tmp/junit/
+  - store_artifacts:
+      path: /tmp/junit/

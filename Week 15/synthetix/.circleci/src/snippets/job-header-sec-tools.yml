@@ -1,0 +1,3 @@
+working_directory: ~/repo
+docker:
+  - image: synthetixio/docker-sec-tools:16.17-ubuntu

@@ -1,0 +1,52 @@
+# based on this thread https://github.com/crytic/slither/issues/948#issuecomment-925506993
+name: Slither
+
+on:
+  push:
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  slither:
+    name: Slither Analysis
+    # run only on master/develop branch and pull requests
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    container:
+      image: synthetixio/docker-sec-tools:16.17-ubuntu
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # pin@v3.0.2
+
+      - name: Set npm cache directory
+        run: npm config set cache .npm-cache --global
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: echo "::set-output name=dir::$(npm config get cache)"
+
+      - name: Get node version
+        id: node-version
+        run: echo "::set-output name=version::$(node --version)"
+
+      - uses: actions/cache@c3f1317a9e7b1ef106c153ac8c0f00fed3ddbc0d # pin@v3.0.4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-ubuntu-${{ steps.node-version.outputs.version }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-ubuntu-${{ steps.node-version.outputs.version }}-
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run slither
+        run: slither . --sarif slither.sarif || true
+
+      - name: Upload lint results
+        if: always()
+        uses: github/codeql-action/upload-sarif@81bfc289f5947eca8a3358341c874cb4f4697b64 # pin@codeql-bundle-20220322
+        with:
+          sarif_file: slither.sarif
+        continue-on-error: true

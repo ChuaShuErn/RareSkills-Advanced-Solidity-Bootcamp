@@ -1,0 +1,42 @@
+{
+	"SNX": {
+		"asset": "SNX",
+		"feed": "0xDC3EA94CD0AC27d9A86C180091e7f78C683d3699"
+	},
+	"ETH": {
+		"asset": "ETH",
+		"feed": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+	},
+	"BTC": {
+		"asset": "BTC",
+		"feed": "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
+	},
+	"ETHBTC": {
+		"asset": "ETHBTC",
+		"feed": "0xAc559F25B1619171CbC396a50854A3240b6A4e99"
+	},
+	"EUR": {
+		"asset": "EUR",
+		"feed": "0xb49f677943BC038e9857d61E7d053CaA2C1734C1"
+	},
+	"JPY": {
+		"asset": "JPY",
+		"feed": "0xBcE206caE7f0ec07b545EddE332A47C2F75bbeb3"
+	},
+	"AUD": {
+		"asset": "AUD",
+		"feed": "0x77F9710E7d0A19669A13c055F62cd80d313dF022"
+	},
+	"GBP": {
+		"asset": "GBP",
+		"feed": "0x5c0Ab2d9b5a7ed9f470386e82BB36A3613cDd4b5"
+	},
+	"CHF": {
+		"asset": "CHF",
+		"feed": "0x449d117117838fFA61263B61dA6301AA2a88B13A"
+	},
+	"KRW": {
+		"asset": "KRW",
+		"feed": "0x01435677FB11763550905594A16B645847C1d0F3"
+	}
+}

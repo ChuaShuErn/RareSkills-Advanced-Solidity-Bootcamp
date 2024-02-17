@@ -1,0 +1,739 @@
+{
+	"USD": {
+		"asset": "USD",
+		"category": "forex",
+		"sign": "$",
+		"description": "US Dollars"
+	},
+	"SNX": {
+		"asset": "SNX",
+		"category": "crypto",
+		"sign": "",
+		"description": "Synthetix Network Token"
+	},
+	"ETH": {
+		"asset": "ETH",
+		"category": "crypto",
+		"sign": "Ξ",
+		"description": "Ether"
+	},
+	"BTC": {
+		"asset": "BTC",
+		"category": "crypto",
+		"sign": "₿",
+		"description": "Bitcoin"
+	},
+	"BNB": {
+		"asset": "BNB",
+		"category": "crypto",
+		"sign": "",
+		"description": "Binance Coin"
+	},
+	"TRX": {
+		"asset": "TRX",
+		"category": "crypto",
+		"sign": "",
+		"description": "TRON"
+	},
+	"XTZ": {
+		"asset": "XTZ",
+		"category": "crypto",
+		"sign": "ꜩ",
+		"description": "Tezos"
+	},
+	"XRP": {
+		"asset": "XRP",
+		"category": "crypto",
+		"sign": "✕",
+		"description": "Ripple"
+	},
+	"LTC": {
+		"asset": "LTC",
+		"category": "crypto",
+		"sign": "Ł",
+		"description": "Litecoin"
+	},
+	"LINK": {
+		"asset": "LINK",
+		"category": "crypto",
+		"sign": "",
+		"description": "Chainlink"
+	},
+	"EOS": {
+		"asset": "EOS",
+		"category": "crypto",
+		"sign": "ε",
+		"description": "EOS"
+	},
+	"BCH": {
+		"asset": "BCH",
+		"category": "crypto",
+		"sign": "Ƀ",
+		"description": "Bitcoin Cash"
+	},
+	"DASH": {
+		"asset": "DASH",
+		"category": "crypto",
+		"sign": "Đ",
+		"description": "Dash"
+	},
+	"XMR": {
+		"asset": "XMR",
+		"category": "crypto",
+		"sign": "ɱ",
+		"description": "Monero"
+	},
+	"ADA": {
+		"asset": "ADA",
+		"category": "crypto",
+		"sign": "₳",
+		"description": "Cardano"
+	},
+	"COMP": {
+		"asset": "COMP",
+		"category": "crypto",
+		"sign": "",
+		"description": "Compound"
+	},
+	"KNC": {
+		"asset": "KNC",
+		"category": "crypto",
+		"sign": "",
+		"description": "Kyber Network Crystal"
+	},
+	"AAVE": {
+		"asset": "AAVE",
+		"category": "crypto",
+		"sign": "",
+		"description": "Aave"
+	},
+	"REN": {
+		"asset": "REN",
+		"category": "crypto",
+		"sign": "",
+		"description": "Ren"
+	},
+	"MKR": {
+		"asset": "MKR",
+		"category": "crypto",
+		"sign": "",
+		"description": "Maker"
+	},
+	"UNI": {
+		"asset": "UNI",
+		"category": "crypto",
+		"sign": "",
+		"description": "Uniswap"
+	},
+	"ZRX": {
+		"asset": "ZRX",
+		"category": "crypto",
+		"sign": "",
+		"description": "0x Protocol"
+	},
+	"REP": {
+		"asset": "REP",
+		"category": "crypto",
+		"sign": "",
+		"description": "Augur"
+	},
+	"UMA": {
+		"asset": "UMA",
+		"category": "crypto",
+		"sign": "",
+		"description": "UMA"
+	},
+	"CRV": {
+		"asset": "CRV",
+		"category": "crypto",
+		"sign": "",
+		"description": "Curve DAO Token"
+	},
+	"WNXM": {
+		"asset": "WNXM",
+		"category": "crypto",
+		"sign": "",
+		"description": "Wrapped Nexus Mutual"
+	},
+	"YFI": {
+		"asset": "YFI",
+		"category": "crypto",
+		"sign": "",
+		"description": "yearn.finance"
+	},
+	"DOT": {
+		"asset": "DOT",
+		"category": "crypto",
+		"sign": "",
+		"description": "Polkadot"
+	},
+	"LRC": {
+		"asset": "LRC",
+		"category": "crypto",
+		"sign": "",
+		"description": "Loopring"
+	},
+	"BNT": {
+		"asset": "BNT",
+		"category": "crypto",
+		"sign": "",
+		"description": "Bancor"
+	},
+	"BAL": {
+		"asset": "BAL",
+		"category": "crypto",
+		"sign": "",
+		"description": "Balancer"
+	},
+	"CRO": {
+		"asset": "CRO",
+		"category": "crypto",
+		"sign": "",
+		"description": "Crypto com"
+	},
+	"LEO": {
+		"asset": "LEO",
+		"category": "crypto",
+		"sign": "",
+		"description": "UNUS SED LEO"
+	},
+	"HT": {
+		"asset": "HT",
+		"category": "crypto",
+		"sign": "",
+		"description": "Huobi Token"
+	},
+	"FTT": {
+		"asset": "FTT",
+		"category": "crypto",
+		"sign": "",
+		"description": "FTX"
+	},
+	"OKB": {
+		"asset": "OKB",
+		"category": "crypto",
+		"sign": "",
+		"description": "OKB"
+	},
+	"KCS": {
+		"asset": "KCS",
+		"category": "crypto",
+		"sign": "",
+		"description": "KuCoin Shares"
+	},
+	"CEX": {
+		"asset": "CEX",
+		"category": "index",
+		"sign": "",
+		"description": "Centralised Exchange Index"
+	},
+	"EUR": {
+		"asset": "EUR",
+		"category": "forex",
+		"sign": "€",
+		"description": "Euros"
+	},
+	"JPY": {
+		"asset": "JPY",
+		"category": "forex",
+		"sign": "¥",
+		"description": "Japanese Yen"
+	},
+	"AUD": {
+		"asset": "AUD",
+		"category": "forex",
+		"sign": "$",
+		"description": "Australian Dollars"
+	},
+	"GBP": {
+		"asset": "GBP",
+		"category": "forex",
+		"sign": "£",
+		"description": "Pound Sterling"
+	},
+	"CHF": {
+		"asset": "CHF",
+		"category": "forex",
+		"sign": "Fr",
+		"description": "Swiss Franc"
+	},
+	"KRW": {
+		"asset": "KRW",
+		"category": "forex",
+		"sign": "₩",
+		"description": "South Korean Won"
+	},
+	"XAU": {
+		"asset": "XAU",
+		"category": "commodity",
+		"sign": "oz",
+		"description": "Gold Ounce"
+	},
+	"XAG": {
+		"asset": "XAG",
+		"category": "commodity",
+		"sign": "oz",
+		"description": "Silver Ounce"
+	},
+	"OIL": {
+		"asset": "OIL",
+		"category": "commodity",
+		"sign": "$",
+		"description": "Perpetual Oil Futures"
+	},
+	"WTI": {
+		"asset": "WTI",
+		"category": "commodity",
+		"sign": "$",
+		"description": "Perpetual Oil Futures"
+	},
+	"FTSE100": {
+		"asset": "FTSE100",
+		"category": "equities",
+		"sign": "",
+		"exchange": "LSE",
+		"description": "FTSE 100 Index"
+	},
+	"NIKKEI225": {
+		"asset": "NIKKEI225",
+		"category": "equities",
+		"sign": "",
+		"exchange": "TSE",
+		"description": "Nikkei 225 Index"
+	},
+	"TSLA": {
+		"asset": "TSLA",
+		"category": "equities",
+		"sign": "",
+		"exchange": "NASDAQ",
+		"description": "Tesla"
+	},
+	"SUSHI": {
+		"asset": "SUSHI",
+		"category": "crypto",
+		"sign": "",
+		"description": "Sushi Token"
+	},
+	"1INCH": {
+		"asset": "1INCH",
+		"category": "crypto",
+		"sign": "",
+		"description": "1inch"
+	},
+	"RUNE": {
+		"asset": "RUNE",
+		"category": "crypto",
+		"sign": "",
+		"description": "RUNE Token"
+	},
+	"AAPL": {
+		"asset": "AAPL",
+		"category": "equities",
+		"sign": "",
+		"exchange": "NASDAQ",
+		"description": "Apple"
+	},
+	"FB": {
+		"asset": "FB",
+		"category": "equities",
+		"sign": "",
+		"exchange": "NASDAQ",
+		"description": "Facebook"
+	},
+	"GOOG": {
+		"asset": "GOOG",
+		"category": "equities",
+		"sign": "",
+		"exchange": "NASDAQ",
+		"description": "Alphabet"
+	},
+	"NFLX": {
+		"asset": "NFLX",
+		"category": "equities",
+		"sign": "",
+		"exchange": "NASDAQ",
+		"description": "Netflix"
+	},
+	"AMZN": {
+		"asset": "AMZN",
+		"category": "equities",
+		"sign": "",
+		"exchange": "NASDAQ",
+		"description": "Amazon"
+	},
+	"COIN": {
+		"asset": "COIN",
+		"category": "equities",
+		"sign": "",
+		"exchange": "NASDAQ",
+		"description": "Coinbase"
+	},
+	"MSFT": {
+		"asset": "MSFT",
+		"category": "equities",
+		"sign": "",
+		"exchange": "NASDAQ",
+		"description": "Microsoft"
+	},
+	"LUNA": {
+		"asset": "LUNA",
+		"category": "crypto",
+		"sign": "",
+		"description": "Terra Luna"
+	},
+	"BOND": {
+		"asset": "BOND",
+		"category": "crypto",
+		"sign": "",
+		"description": "Barnbridge"
+	},
+	"CREAM": {
+		"asset": "CREAM",
+		"category": "crypto",
+		"sign": "",
+		"description": "Cream Finance"
+	},
+	"ALPHA": {
+		"asset": "ALPHA",
+		"category": "crypto",
+		"sign": "",
+		"description": "Alpha Finance"
+	},
+	"SOL": {
+		"asset": "SOL",
+		"category": "crypto",
+		"sign": "",
+		"description": "Solana"
+	},
+	"AVAX": {
+		"asset": "AVAX",
+		"category": "crypto",
+		"sign": "",
+		"description": "Avalanche"
+	},
+	"MATIC": {
+		"asset": "MATIC",
+		"category": "crypto",
+		"sign": "",
+		"description": "Matic"
+	},
+	"APE": {
+		"asset": "APE",
+		"category": "crypto",
+		"sign": "",
+		"description": "ApeCoin"
+	},
+	"DYDX": {
+		"asset": "DYDX",
+		"category": "crypto",
+		"sign": "",
+		"description": "dYdX"
+	},
+	"AXS": {
+		"asset": "AXS",
+		"category": "crypto",
+		"sign": "",
+		"description": "Axie Infinity"
+	},
+	"DebtRatio": {
+		"asset": "DebtRatio",
+		"category": "crypto",
+		"sign": "",
+		"description": "Synthetix Aggregator Debt Ratio"
+	},
+	"OP": {
+		"asset": "OP",
+		"category": "crypto",
+		"sign": "",
+		"description": "Optimism"
+	},
+	"DOGE": {
+		"asset": "DOGE",
+		"category": "crypto",
+		"sign": "Ɖ",
+		"description": "Dogecoin"
+	},
+	"ATOM": {
+		"asset": "ATOM",
+		"category": "crypto",
+		"sign": "",
+		"description": "Cosmos ATOM"
+	},
+	"FLOW": {
+		"asset": "FLOW",
+		"category": "crypto",
+		"sign": "",
+		"description": "Flow"
+	},
+	"FTM": {
+		"asset": "FTM",
+		"category": "crypto",
+		"sign": "",
+		"description": "Fantom FTM"
+	},
+	"NEAR": {
+		"asset": "NEAR",
+		"category": "crypto",
+		"sign": "",
+		"description": "NEAR"
+	},
+	"ARB": {
+		"asset": "ARB",
+		"category": "crypto",
+		"sign": "",
+		"description": "Arbitrum"
+	},
+	"APT": {
+		"asset": "APT",
+		"category": "crypto",
+		"sign": "",
+		"description": "Aptos"
+	},
+	"LDO": {
+		"asset": "LDO",
+		"category": "crypto",
+		"sign": "",
+		"description": "Lido DAO"
+	},
+	"GMX": {
+		"asset": "GMX",
+		"category": "crypto",
+		"sign": "",
+		"description": "GMX"
+	},
+	"FIL": {
+		"asset": "FIL",
+		"category": "crypto",
+		"sign": "⨎",
+		"description": "Filecoin"
+	},
+	"SHIB": {
+		"asset": "SHIB",
+		"category": "crypto",
+		"sign": "",
+		"description": "Shiba Inu"
+	},
+	"PEPE": {
+		"asset": "PEPE",
+		"category": "crypto",
+		"sign": "",
+		"description": "Pepe"
+	},
+	"SUI": {
+		"asset": "SUI",
+		"category": "crypto",
+		"sign": "",
+		"description": "Sui"
+	},
+	"BLUR": {
+		"asset": "BLUR",
+		"category": "crypto",
+		"sign": "",
+		"description": "Blur"
+	},
+	"FLOKI": {
+		"asset": "FLOKI",
+		"category": "crypto",
+		"sign": "",
+		"description": "Floki"
+	},
+	"INJ": {
+		"asset": "INJ",
+		"category": "crypto",
+		"sign": "",
+		"description": "Injective"
+	},
+	"STETH": {
+		"asset": "STETH",
+		"category": "crypto",
+		"sign": "",
+		"description": "Lido Staked ETH"
+	},
+	"STETHETH": {
+		"asset": "STETHETH",
+		"category": "crypto",
+		"sign": "",
+		"description": "Lido Staked ETH against ETH"
+	},
+	"ETHBTC": {
+		"asset": "ETHBTC",
+		"category": "crypto",
+		"sign": "Ξ/₿",
+		"description": "Ether/Bitcoin Ratio"
+	},
+	"ETC": {
+		"asset": "ETC",
+		"category": "crypto",
+		"sign": "ξ",
+		"description": "Ethereum Classic"
+	},
+	"MAV": {
+		"asset": "MAV",
+		"category": "crypto",
+		"sign": "",
+		"description": "Maverick Protocol"
+	},
+	"RPL": {
+		"asset": "RPL",
+		"category": "crypto",
+		"sign": "",
+		"description": "Rocket Pool"
+	},
+	"WLD": {
+		"asset": "WLD",
+		"category": "crypto",
+		"sign": "",
+		"description": "Worldcoin"
+	},
+	"USDT": {
+		"asset": "USDT",
+		"category": "crypto",
+		"sign": "",
+		"description": "Tether USD"
+	},
+	"FXS": {
+		"asset": "FXS",
+		"category": "crypto",
+		"sign": "",
+		"description": "Frax Share"
+	},
+	"RNDR": {
+		"asset": "RNDR",
+		"category": "crypto",
+		"sign": "",
+		"description": "Render"
+	},
+	"ONE": {
+		"asset": "ONE",
+		"category": "crypto",
+		"sign": "",
+		"description": "Harmony"
+	},
+	"PERP": {
+		"asset": "PERP",
+		"category": "crypto",
+		"sign": "",
+		"description": "Perpetual Protocol"
+	},
+	"ZIL": {
+		"asset": "ZIL",
+		"category": "crypto",
+		"sign": "",
+		"description": "Zilliqa"
+	},
+
+	"ZEC": {
+		"asset": "ZEC",
+		"category": "crypto",
+		"sign": "",
+		"description": "Zcash"
+	},
+	"ENJ": {
+		"asset": "ENJ",
+		"category": "crypto",
+		"sign": "",
+		"description": "Enjin Coin"
+	},
+	"ICP": {
+		"asset": "ICP",
+		"category": "crypto",
+		"sign": "",
+		"description": "Internet Computer Protocol"
+	},
+	"XLM": {
+		"asset": "XLM",
+		"category": "crypto",
+		"sign": "",
+		"description": "Stellar"
+	},
+	"CELO": {
+		"asset": "CELO",
+		"category": "crypto",
+		"sign": "",
+		"description": "Celo"
+	},
+	"ALGO": {
+		"asset": "ALGO",
+		"category": "crypto",
+		"sign": "",
+		"description": "Algorand"
+	},
+	"SEI": {
+		"asset": "SEI",
+		"category": "crypto",
+		"sign": "",
+		"description": "Sei"
+	},
+	"TRB": {
+		"asset": "TRB",
+		"category": "crypto",
+		"sign": "",
+		"description": "Tellor Tributes"
+	},
+	"TIA": {
+		"asset": "TIA",
+		"category": "crypto",
+		"sign": "",
+		"description": "Celestia"
+	},
+	"IMX": {
+		"asset": "IMX",
+		"category": "crypto",
+		"sign": "",
+		"description": "Immutable X"
+	},
+	"MEME": {
+		"asset": "MEME",
+		"category": "crypto",
+		"sign": "",
+		"description": "Memecoin"
+	},
+	"FET": {
+		"asset": "FET",
+		"category": "crypto",
+		"sign": "",
+		"description": "Fetch.ai"
+	},
+	"GRT": {
+		"asset": "GRT",
+		"category": "crypto",
+		"sign": "",
+		"description": "The Graph"
+	},
+	"PYTH": {
+		"asset": "PYTH",
+		"category": "crypto",
+		"sign": "",
+		"description": "Pyth Network"
+	},
+	"ANKR": {
+		"asset": "ANKR",
+		"category": "crypto",
+		"sign": "",
+		"description": "Ankr Network"
+	},
+	"BONK": {
+		"asset": "BONK",
+		"category": "crypto",
+		"sign": "",
+		"description": "BONK"
+	},
+	"WSTETH": {
+		"asset": "WSTETH",
+		"category": "crypto",
+		"sign": "",
+		"description": "Wrapped stETH"
+	},
+	"JTO": {
+		"asset": "JTO",
+		"category": "crypto",
+		"sign": "",
+		"description": "Jito"
+	},
+	"ORDI": {
+		"asset": "ORDI",
+		"category": "crypto",
+		"sign": "",
+		"description": "ORDI"
+	}
+}

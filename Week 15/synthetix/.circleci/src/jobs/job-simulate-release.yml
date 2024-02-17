@@ -1,0 +1,23 @@
+# Starts a fork of mainnet, deploys the latest release, and runs L1 integration tests
+{{> job-header-node.yml}}
+steps:
+  - checkout
+  - attach_workspace:
+      at: .
+  - run:
+      command: npm run fork -- --target-network mainnet --port 8545
+      background: true
+  - cmd-wait-for-port:
+      port: 8545
+  - run:
+      name: Simulate release on L1 fork
+      command: |
+        # Only compile and deploy when there are new contracts
+        UPCOMING_RELEASE=$(node bin.js releases --layer=base --unreleased --with-sources --name-only)
+        if [ ! -z "$UPCOMING_RELEASE" ]; then
+          npx hardhat simulate:migration --generate --test
+        fi;
+  - store_test_results:
+      path: /tmp/junit/
+  - store_artifacts:
+      path: /tmp/junit/
