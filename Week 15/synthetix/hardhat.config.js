@@ -34,6 +34,9 @@ module.exports = {
 			{
 				version: '0.5.16',
 			},
+			{
+				version: '0.8.24',
+			}
 		],
 	},
 	paths: {
@@ -105,11 +108,12 @@ module.exports = {
 		},
 	},
 	gasReporter: {
-		enabled: false,
-		showTimeSpent: true,
+		enabled: true,
+		showTimeSpent: false,
 		gasPrice: 20,
 		currency: 'USD',
 		maxMethodDiff: 25, // CI will fail if gas usage is > than this %
+		noColors: true,
 		outputFile: 'test-gas-used.log',
 	},
 	mocha: {
