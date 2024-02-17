@@ -1794,9 +1794,7 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
         }
 
 
-  
-    //TODO: Finish URI code in yul
-    //currently supports id 1 - 5 
+
     function testGetURIForIdsOneToFive() public {
     // Ensure id is within the desired range
     
@@ -1852,19 +1850,28 @@ contract ERC1155YulTest is DSTestPlus, ERC1155TokenReceiver {
         
     }
 
-    // Fetch the URI from the contract
-   
 
-    // Construct the expected URI based on the id
-    // string memory expectedUri = string(abi.encodePacked(
-    //     "https://token-cdn-chosen-domain/",
-    //     Strings.toString(id), // Convert id to string
-    //     ".json"
-    // ));
+    function testSetURI() public {
+                // id 1
+        uint256 tokenId = 1;
+        token.mint(address(0xBEEF),tokenId,100);
+        string memory expectedURI = string(abi.encodePacked("https://token-cdn-domain-odd/1.json"));
+        string memory uri = token.uri(tokenId);
+        assertEq(uri,expectedURI );
 
-    // // Assert that the fetched URI matches the expected URI
-    // assertEq(uri, expectedUri);
-    //}   
+        string memory myNewURI = string(abi.encodePacked("hi.json"));
+     
+        token.setURI(tokenId,myNewURI);
+       
+        string memory returnedURI = token.uri(tokenId);
+        assertEq(returnedURI,myNewURI);
+        
+        string memory anotherURI = string(abi.encodePacked("absoluteBonkersLengthThatGoesOnSomemore.json"));
+
+        token.setURI(tokenId, anotherURI);
+        string memory returnedURI2 = token.uri(tokenId);
+        assertEq(returnedURI2, anotherURI);
 
 
+    }
 }

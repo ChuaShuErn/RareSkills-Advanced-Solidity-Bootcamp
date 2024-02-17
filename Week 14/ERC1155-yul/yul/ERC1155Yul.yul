@@ -199,16 +199,24 @@ object "ERC1155Yul" {
       // when string is super long ... lorem ipsum
       // calldata looks like this 
       // 02fe5305
-      // 0000000000000000000000000000000000000000000000000000000000000020 offset
+      // 0000000000000000000000000000000000000000000000000000000000000001 - id
+      // 000000000000000000000000000000000000000000000000000000000000004 - offset
       // 000000000000000000000000000000000000000000000000000000000000007a - len 122
       // 4c6f72656d20697073756d20646f6c6f722073697420616d65742c20636f6e73 -> 32 bytes string
       // 656374657475722061646970697363696e6720656c69742c2073656420646f20 -> 32 bytes string
       // 656975736d6f642074656d706f7220696e6369646964756e74207574206c6162 -> 32 bytes string
       // 6f726520657420646f6c6f7265206d61676e6120616c69717561000000000000 -> 26 bytes string
-      case 0x67db3b8f /*function setURI(string memory newUri, uint256 id) external*/{
+      case 0x862440e2 /*function setURI( uint256 id,string memory newUri) external*/{
+        
+        let tokenId := decodeAsUint(0)
+        let stringLen := decodeAsUint(2)
 
-        let stringLen := decodeAsUint(1)
-        _setURI(stringLen)
+        // cannot empty URI
+        if iszero(stringLen){
+          revert(0,0)
+        }
+        
+        _setURI(tokenId, stringLen)
       }
 
       default {
@@ -541,13 +549,16 @@ object "ERC1155Yul" {
         emitTransferBatch(caller(),from,to,idsOffsetAmount,amountsOffsetAmount, idsLen)
      }
 
-
+      //TODO: ReturnURI base on Len
      function returnUri(tokenId){
 
        let len := getUriStorageLenByTokenId(tokenId)
-
+      
+      let shouldBeInLenSlot := 0x01
        if gt(len, 0x1F){
           len := div(len,2)
+          // if len is greater than 31 bytes should be in len slot is false
+          shouldBeInLenSlot := 0x00
        }
 
        let memPtr := getMemoryPointer()
@@ -561,15 +572,55 @@ object "ERC1155Yul" {
        // get keccak of lenSlot
        // use 0x00 scratch space
        let keccakOfKey  := keccak256(0, 0x20)
-       let firstPart := sload(keccakOfKey) 
-       mstore(getMemoryPointer(), firstPart)
-       incrMemoryPointer()
-       let secondPart := sload(safeAdd(keccakOfKey,1)) 
-        mstore(getMemoryPointer(), secondPart)
-       incrMemoryPointer()
+       let iterated := 0x00
+        // foreach 32 byte chunk
+        // mstore it
+        // if it is NOT in len slot
+       if iszero(shouldBeInLenSlot){
+
+        let fullChunks := div(len,0x20)
+        
+        for {let i:=0} lt(i,fullChunks) {i :=add(i,1)}{
+         
+          let chunk := sload(safeAdd(keccakOfKey,i))
+          mstore(getMemoryPointer(),chunk)
+          incrMemoryPointer()
+          iterated := safeAdd(iterated,0x01)
+
+        }
+        // if theres leftover
+        if gt(mod(len, 32), 0) {
+            let lastKey := safeAdd(keccakOfKey,iterated)
+            let lastStringBytes := sload(lastKey)
+            mstore(getMemoryPointer(),lastStringBytes)
+            incrMemoryPointer()
+          }
+
+       }
+        
+        // if it IS in lenslot
+        if eq(shouldBeInLenSlot,0x01){
+           //shortStr is 0xasdadasdasdadasdassdasd.. then len
+           // i want to return 0xasdasdasdasdasda then the last byte is 00
+           let shortStr := sload(lenSlot)
+           let mask := 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00
+           let result := and(shortStr, mask)
+           mstore(getMemoryPointer(),result)
+           incrMemoryPointer()
+
+        }
+
+        
+       
+      //  let firstPart := sload(keccakOfKey) 
+      //  mstore(getMemoryPointer(), firstPart)
+      //  incrMemoryPointer()
+      //  let secondPart := sload(safeAdd(keccakOfKey,1)) 
+      //   mstore(getMemoryPointer(), secondPart)
+      //  incrMemoryPointer()
 
        let size := safeSubtract(getMemoryPointer(), memPtr)
-       return (memPtr,0x80)
+       return (memPtr,size)
 
      }
 
@@ -583,7 +634,8 @@ object "ERC1155Yul" {
       // when string is super long ... lorem ipsum
       // calldata looks like this 
       // 02fe5305
-      // 0000000000000000000000000000000000000000000000000000000000000020 offset
+      // 0000000000000000000000000000000000000000000000000000000000000001 token id
+      // 0000000000000000000000000000000000000000000000000000000000000040 offset
       // 000000000000000000000000000000000000000000000000000000000000007a - len 122
       // 4c6f72656d20697073756d20646f6c6f722073697420616d65742c20636f6e73 -> 32 bytes string
       // 656374657475722061646970697363696e6720656c69742c2073656420646f20 -> 32 bytes string
@@ -591,21 +643,74 @@ object "ERC1155Yul" {
       // 6f726520657420646f6c6f7265206d61676e6120616c69717561000000000000 -> 26 bytes string
 
       // if string is empty string "", it just gives 0 at len
-     function _setURI(stringLenInBytes){
+     function _setURI(tokenId,stringLenInBytes){
 
         //if len is greater than 31 bytes, we need to mul it
         let len := stringLenInBytes
         
+        
         let shouldBeInLenSlot := 0x01
         // if len is gt than 31 bytes
+       
+          
         if gt(len,0x1f){
+            
           // shouldBeInLenSlot set to false
           shouldBeInLenSlot := 0x00
           // set len to 2x + 1
           len := safeAdd(mul(len,2),1)
         }
+       
+       
         
        // if the string len is 31 bytes or less, store the string len in the same 
+       let lenSlot := getURILenSlotByTokenId(tokenId)
+       // use 0x00 scratch space
+        mstore(0,lenSlot)
+       let keccakOfKey := keccak256(0,0x20)
+      
+      
+      // if string len is more than 32 bytes store lenSlotData as is 
+       if iszero(shouldBeInLenSlot){
+        sstore(lenSlot, len)
+        // for loop for chunks
+        let fullChunks := div(len,0x20)
+        let iterated := 0x00
+        let calldatapointer := 0x00
+
+        for {let i :=0} lt(i,fullChunks) {i := add(i,1)}{
+            calldatapointer := safeAdd(0x64,mul(i,0x20))
+            let thisChunk := calldataload(calldatapointer)
+            // store
+          
+            sstore(safeAdd(keccakOfKey,i), thisChunk)
+            iterated := safeAdd(iterated,1)
+
+        }
+        if gt(mod(len, 32), 0){
+          
+          let finalChunk := calldataload(safeAdd(calldatapointer,0x20))
+          sstore(safeAdd(keccakOfKey,iterated),finalChunk)
+          
+        }
+
+        
+       }
+       // otherwise manipulate len Slot data
+        if eq(shouldBeInLenSlot,0x01){
+           
+          // just store the length in this slot
+          // load into stack the 31 byte word
+          let shortStr := calldataload(0x64)
+         
+          // or is fine because the end will be zeroed out
+          let lenSlotData := or(shortStr,len)
+          sstore(lenSlot,lenSlotData)
+          // concat lenslotData + len 
+        }
+
+        emitURI(tokenId)
+
        // in the len slot
        
 
@@ -1252,33 +1357,30 @@ object "ERC1155Yul" {
           //offset
           mstore(memPtr,0x20)
           incrMemoryPointer()
+       
           
           let len := getUriStorageLenByTokenId(tokenId)
 
-
+          let shouldBeInLenSlot := 0x01
           // greater than 31 bytes
           if gt(len, 0x1F){
+            
             len := div(len,2)
+            shouldBeInLenSlot := 0x00
           }
 
-         
-
-        // //NOTE if len is greater than 31 bytes
-        // // it is len * 2 + 1
-        // if gt(lenStorage, 0x1F){
-        //   sstore(key, safeAdd(mul(lenStorage,2),1))
-        // }
-        // if lt(lenStorage, 0x20){
-        //   sstore(key, lenStorage)
-        // }
-
+        
           mstore(getMemoryPointer(),len)
           incrMemoryPointer()
           let key := getURILenSlotByTokenId(tokenId)
           // use scratch space to get keccak of key
           mstore(0, key)
           let keccakOfKey := keccak256(0,0x20)
-          let fullChunks := div(len, 32)
+
+          // if greater than 31 bytes 
+
+        if iszero(shouldBeInLenSlot){
+            let fullChunks := div(len, 32)
           let timesIterated := 0x00
 
 
@@ -1300,6 +1402,21 @@ object "ERC1155Yul" {
             mstore(getMemoryPointer(),lastStringBytes)
             incrMemoryPointer()
           }
+
+        }  
+        // if less than 31 bytes
+        if eq(shouldBeInLenSlot,0x01){
+          
+          // string in is len slot
+          let shortStr := sload(key)
+          // mask out last bytes
+          let mask := 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00
+          let res := and(shortStr,mask)
+          mstore(getMemoryPointer(),res)
+          incrMemoryPointer()
+          
+        }
+          
 
           let endPtr := getMemoryPointer()
           let size := safeSubtract(endPtr,memPtr)
