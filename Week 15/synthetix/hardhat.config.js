@@ -24,7 +24,7 @@ const CACHE_FOLDER = 'cache';
 
 module.exports = {
 	ovm: {
-		solcVersion: '0.5.16',
+		solcVersion: '0.8.20',
 	},
 	solidity: {
 		compilers: [
@@ -34,9 +34,7 @@ module.exports = {
 			{
 				version: '0.5.16',
 			},
-			{
-				version: '0.8.24',
-			}
+			{ version: "0.8.20", settings: {} },
 		],
 	},
 	paths: {
@@ -114,7 +112,7 @@ module.exports = {
 		currency: 'USD',
 		maxMethodDiff: 25, // CI will fail if gas usage is > than this %
 		noColors: true,
-		outputFile: 'test-gas-used.log',
+		outputFile: 'test-gas-used-after.log',
 	},
 	mocha: {
 		timeout: 300e3, // 300s

@@ -136,6 +136,7 @@
 	},
 	"dependencies": {
 		"@nomiclabs/hardhat-etherscan": "^3.1.0",
+		"@openzeppelin/contracts": "^5.0.1",
 		"abi-decoder": "^2.3.0",
 		"commander": "^8.1.0",
 		"inquirer": "^6.5.2",
