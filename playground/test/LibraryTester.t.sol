@@ -30,7 +30,7 @@ contract LibraryTester is Test {
 
         // Number of debt shares is 10_000
 
-        //Repay uses `sub` with uses `toElastic`
+        //Repay uses `sub` function which uses the `toElastic` function.
 
         // 1% of debt share is 100
         uint256 onePercent = 100;
