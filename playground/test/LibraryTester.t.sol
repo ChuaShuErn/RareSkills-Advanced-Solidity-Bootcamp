@@ -21,7 +21,7 @@ contract LibraryTester is Test {
         assertEq(totalBorrow.elastic, 100);
     }
 
-    function testVeryLowPercentageOfDebtShare() public {
+    function testToElastic() public {
         //My debt share is 100, which is 1% of 10_000
         // i want to repay my 100 shares of debt
         // what would the toElastic function give me?
@@ -29,6 +29,8 @@ contract LibraryTester is Test {
         totalBorrow = elasticLessThanBase;
 
         // Number of debt shares is 10_000
+
+        //Repay uses `sub` with uses `toElastic`
 
         // 1% of debt share is 100
         uint256 onePercent = 100;
@@ -52,36 +54,22 @@ contract LibraryTester is Test {
         // round down, will pay zero
         uint256 elasticThatIOwe4 = totalBorrow.toElastic(pointOnePercent, false);
         assertEq(0, elasticThatIOwe4);
+
+        uint256 elasticThatIOwe5 = totalBorrow.toElastic(pointZeroOnePercent, false);
+        assertEq(0, elasticThatIOwe5);
     }
 
-    function testMethod3() public {
-        // Setup a scenario where elastic is lower than base
-        // Example: totalBorrow.elastic = 100, totalBorrow.base = 10,000
-        // Rebase memory elasticLowerThanBase = Rebase({base: 10_000, elastic: 100});
-        // totalBorrow = elasticLowerThanBase;
+    function testToBase() public {
+        Rebase memory elasticLowerThanBase = Rebase({base: 10_000, elastic: 100});
+        totalBorrow = elasticLowerThanBase;
 
-        // Calculate the base that corresponds to a specific elastic amount
-        // Let's say you want to calculate the base for 1 elastic
+        // Calculate base that corresponds to a specific elastic amount
+        // 1 Elastic -> 100 base
         uint256 baseForOneElastic = totalBorrow.toBase(1, true);
+        assertEq(baseForOneElastic, 10_000 / 100);
 
-        console2.log("Base amount for 1 elastic:", baseForOneElastic);
-
-        // Perform the assertions
-        // Since the total elastic is 100, and the total base is 10,000,
-        // 1 elastic should correspond to a proportionate share of the base.
-        uint256 expectedBaseAmount = totalBorrow.base * 1 / totalBorrow.elastic;
-        assertEq(baseForOneElastic, expectedBaseAmount, "The calculated base amount is incorrect");
+        // 100 elastic -> 10_000 Base
+        uint256 baseForOneHundredElastic = totalBorrow.toBase(100, true);
+        assertEq(baseForOneHundredElastic, 10_000);
     }
 }
-
-// function toElastic(Rebase memory total, uint256 base, bool roundUp) internal pure returns (uint256 elastic) {
-//         if (total.base == 0) {
-//             elastic = base;
-//         } else {
-// 10 * 100 / 10_000 = 0 (integer divison)
-//             elastic = (base * total.elastic) / total.base;
-//             if (roundUp && (elastic * total.base) / total.elastic < base) {
-//                 elastic++;
-//             }
-//         }
-//     }
