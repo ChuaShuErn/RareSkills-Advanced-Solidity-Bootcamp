@@ -112,7 +112,7 @@ module.exports = {
 		currency: 'USD',
 		maxMethodDiff: 25, // CI will fail if gas usage is > than this %
 		noColors: true,
-		outputFile: 'test-gas-used-after.log',
+		outputFile: 'Optimized.log',
 	},
 	mocha: {
 		timeout: 300e3, // 300s
