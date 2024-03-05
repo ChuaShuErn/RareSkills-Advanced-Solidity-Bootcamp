@@ -54,6 +54,7 @@ contract LotsOfAssembly2 {
         }
     }
 
+    //@dev Compiler run failed: Consider using "memory-safe" annotation
     // function startPointWithoutAnnotation() public pure returns (uint256) {
     //     assembly {
     //         let target := 0x05
@@ -71,23 +72,13 @@ contract LotsOfAssembly2 {
             let target := 0x05
             mstore(0x80, target)
         }
-        uint256 doSomething = 1 + 2 + 3 + 4;
+        uint256 someNumber = doSomething();
         assembly ("memory-safe") {
             return(0x80, 0x20)
         }
     }
 
-    function getMemPointer() public pure returns (uint256) {
-        assembly ("memory-safe") {
-            mstore(0, mload(0x40))
-            return(0, 0x20)
-        }
-    }
-
-    function getAt128() public pure returns (uint256) {
-        assembly ("memory-safe") {
-            mstore(0, mload(0x80))
-            return(0, 0x20)
-        }
+    function doSomething() public pure returns (uint256) {
+        return 1 + 2 + 3 + 4;
     }
 }
