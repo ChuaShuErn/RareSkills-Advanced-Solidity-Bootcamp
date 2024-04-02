@@ -73,3 +73,6 @@
 [submodule "Week 20/ShuErc20Permit/lib/forge-std"]
 	path = Week 20/ShuErc20Permit/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "Week 20/ShuErc20Permit/lib/openzeppelin-contracts"]
+	path = Week 20/ShuErc20Permit/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
